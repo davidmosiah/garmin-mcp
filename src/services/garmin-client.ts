@@ -2,6 +2,7 @@ import { URL, URLSearchParams } from "node:url";
 import { DEFAULT_LIMIT, GARMIN_CONNECT_API_BASE_URL, GARMIN_DI_TOKEN_URL, MAX_GARMIN_LIMIT } from "../constants.js";
 import type { GarminConfig, GarminTokenSet } from "../types.js";
 import { disabledCacheStatus, GarminCache, type CacheStatus } from "./cache.js";
+import { fetchWithCache, getCacheStats } from "./http-cache.js";
 import { fetchWithRetry as fetchWithRetryMiddleware } from "./http-retry.js";
 import { redactErrorMessage } from "./redaction.js";
 import { TokenStore } from "./token-store.js";
@@ -82,8 +83,17 @@ export class GarminClient {
   }
 
   async cacheStatus(): Promise<CacheStatus> {
-    if (!this.config.cacheEnabled) return disabledCacheStatus(this.config.cachePath);
-    return this.getCache().status();
+    const httpStats = getCacheStats();
+    const http_cache = {
+      size: httpStats.size,
+      hit_count: httpStats.hit_count,
+      miss_count: httpStats.miss_count,
+      hit_rate: httpStats.hit_rate,
+      default_ttl_seconds: 60,
+      bypass_env_var: "GARMIN_NO_CACHE"
+    };
+    if (!this.config.cacheEnabled) return { ...disabledCacheStatus(this.config.cachePath), http_cache };
+    return { ...this.getCache().status(), http_cache };
   }
 
   async clearLocalTokens(): Promise<{ ok: true; token_path: string; local_tokens_cleared: boolean }> {
@@ -232,9 +242,14 @@ export class GarminClient {
   }
 
   private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
-    return fetchWithRetryMiddleware(fetch, url, init, {
+    const retryWrappedFetch = (u: string, i?: RequestInit) => fetchWithRetryMiddleware(fetch, u, i, {
       vendor: "garmin",
       envFlag: "GARMIN_NO_RETRY"
+    });
+    return fetchWithCache(url, init, {
+      defaultTtlSeconds: 60,
+      envVarBypass: "GARMIN_NO_CACHE",
+      innerFetch: retryWrappedFetch
     });
   }
 }

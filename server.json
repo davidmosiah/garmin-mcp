@@ -6,12 +6,12 @@
     "url": "https://github.com/davidmosiah/garminmcp",
     "source": "github"
   },
-  "version": "0.4.2",
+  "version": "0.4.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "garmin-mcp-unofficial",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "transport": {
         "type": "stdio"
       },
@@ -47,6 +47,13 @@
         {
           "name": "GARMIN_DOMAIN",
           "description": "Optional Garmin domain override. Use garmin.cn only for China accounts; default is garmin.com.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "GARMIN_NO_CACHE",
+          "description": "Set to true to bypass the in-memory HTTP response cache (60s TTL for GET only). POST/PUT/DELETE and 4xx/5xx responses are never cached regardless.",
           "isRequired": false,
           "format": "string",
           "isSecret": false
