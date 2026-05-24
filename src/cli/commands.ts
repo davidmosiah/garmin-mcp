@@ -66,7 +66,7 @@ async function runDoctor(args: string[]): Promise<number> {
   const options = parseDoctorOptions(args);
   const status = await buildConnectionStatus({ client: options.client });
   if (options.json) {
-    console.log(JSON.stringify(status, null, 2));
+    console.log(JSON.stringify(safeDoctorStatus(status), null, 2));
   } else {
     printDoctor(status);
   }
@@ -90,6 +90,30 @@ function parseDoctorOptions(args: string[]) {
   };
 }
 
+
+function safeDoctorStatus(status: Awaited<ReturnType<typeof buildConnectionStatus>>): unknown {
+  const raw = status as Record<string, any>;
+  const safe = JSON.parse(JSON.stringify(raw));
+  if (safe.config) delete safe.config.path;
+  if (safe.token) {
+    delete safe.token.path;
+    delete safe.token.display_name;
+  }
+  if (safe.cache) delete safe.cache.path;
+  if (safe.oauth) {
+    safe.oauth = {
+      scope_status: safe.oauth.scope_status,
+      granted_scope_count: Array.isArray(safe.oauth.granted_scopes) ? safe.oauth.granted_scopes.length : 0,
+      missing_recommended_scope_count: Array.isArray(safe.oauth.missing_recommended_scopes) ? safe.oauth.missing_recommended_scopes.length : 0,
+    };
+  }
+  if (safe.client_checks?.hermes) {
+    delete safe.client_checks.hermes.config_path;
+    delete safe.client_checks.hermes.skill_path;
+  }
+  return safe;
+}
+
 function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>): void {
   const ok = "✓";
   const fail = "✗";
@@ -106,24 +130,24 @@ function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>):
   console.log("");
   console.log("Checks");
   line(check(status.node.supported), "Node.js >=20", status.node.supported ? undefined : `version ${status.node.version}`);
-  line(status.config.exists ? ok : info, "Local config", status.config.exists ? `${status.config.source} at ${status.config.path}` : "optional (none yet)");
-  line(check(status.token.exists), "Token file", status.token.exists ? status.token.path : "missing — run auth --install-helper");
+  line(status.config.exists ? ok : info, "Local config", status.config.exists ? status.config.source : "optional (none yet)");
+  line(check(status.token.exists), "Token file", status.token.exists ? "present" : "missing — run auth --install-helper");
   if (status.token.exists) {
     line(status.token.secure_permissions === false ? fail : ok, "Token permissions", status.token.secure_permissions === false ? "insecure (chmod 600)" : undefined);
     line(check(Boolean(status.token.has_di_token)), "DI token", status.token.has_di_token ? undefined : "missing");
     line(check(Boolean(status.token.has_refresh_token)), "DI refresh token", status.token.has_refresh_token ? undefined : "missing");
-    if (status.token.display_name) line(info, "Garmin display name", status.token.display_name);
+    if (status.token.display_name) line(info, "Garmin display name", "available");
   }
   line(info, "Privacy mode", status.privacy_mode);
-  line(status.cache.enabled ? ok : info, "Cache", status.cache.enabled ? `enabled at ${status.cache.path}` : "disabled");
+  line(status.cache.enabled ? ok : info, "Cache", status.cache.enabled ? "enabled" : "disabled");
   if (status.client_checks?.hermes) {
     const hermes = status.client_checks.hermes;
     console.log("");
     console.log("Hermes");
-    line(info, "config path", hermes.config_path);
+    line(info, "config path", hermes.config_path ? "configured" : "missing");
     line(check(hermes.garmin_server_configured), "configured");
     line(check(hermes.package_pinned), "pinned package");
-    line(check(hermes.skill_installed), "skill", hermes.skill_installed ? hermes.skill_path : "missing");
+    line(check(hermes.skill_installed), "skill", hermes.skill_installed ? "installed" : "missing");
     line(info, "direct tool prefix", hermes.direct_tool_prefix);
   }
   console.log("");
