@@ -1,0 +1,25 @@
+<svg width="1100" height="360" viewBox="0 0 1100 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Garmin MCP agent workflow</title>
+  <desc id="desc">Local Garmin Connect tokens feed Garmin MCP, which exposes daily summaries to an AI agent.</desc>
+  <rect width="1100" height="360" rx="24" fill="#0F172A"/>
+  <rect x="36" y="40" width="250" height="280" rx="18" fill="#082F49" stroke="#38BDF8" stroke-width="2"/>
+  <rect x="425" y="40" width="250" height="280" rx="18" fill="#064E3B" stroke="#34D399" stroke-width="2"/>
+  <rect x="814" y="40" width="250" height="280" rx="18" fill="#312E81" stroke="#A78BFA" stroke-width="2"/>
+  <text x="161" y="91" text-anchor="middle" fill="#E0F2FE" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Garmin Connect</text>
+  <text x="161" y="132" text-anchor="middle" fill="#BAE6FD" font-family="Inter, Arial, sans-serif" font-size="18">Body Battery</text>
+  <text x="161" y="164" text-anchor="middle" fill="#BAE6FD" font-family="Inter, Arial, sans-serif" font-size="18">Sleep + HRV</text>
+  <text x="161" y="196" text-anchor="middle" fill="#BAE6FD" font-family="Inter, Arial, sans-serif" font-size="18">Stress + activities</text>
+  <text x="550" y="91" text-anchor="middle" fill="#D1FAE5" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">garmin-mcp</text>
+  <text x="550" y="132" text-anchor="middle" fill="#A7F3D0" font-family="Inter, Arial, sans-serif" font-size="18">Local token file</text>
+  <text x="550" y="164" text-anchor="middle" fill="#A7F3D0" font-family="Inter, Arial, sans-serif" font-size="18">Read-only summaries</text>
+  <text x="550" y="196" text-anchor="middle" fill="#A7F3D0" font-family="Inter, Arial, sans-serif" font-size="18">MCP tools over stdio</text>
+  <text x="939" y="91" text-anchor="middle" fill="#EDE9FE" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">AI agent</text>
+  <text x="939" y="132" text-anchor="middle" fill="#DDD6FE" font-family="Inter, Arial, sans-serif" font-size="18">Daily brief</text>
+  <text x="939" y="164" text-anchor="middle" fill="#DDD6FE" font-family="Inter, Arial, sans-serif" font-size="18">Recovery bottleneck</text>
+  <text x="939" y="196" text-anchor="middle" fill="#DDD6FE" font-family="Inter, Arial, sans-serif" font-size="18">Training plan</text>
+  <path d="M306 180H405" stroke="#E2E8F0" stroke-width="5" stroke-linecap="round"/>
+  <path d="M392 165L409 180L392 195" stroke="#E2E8F0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M695 180H794" stroke="#E2E8F0" stroke-width="5" stroke-linecap="round"/>
+  <path d="M781 165L798 180L781 195" stroke="#E2E8F0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="550" y="292" text-anchor="middle" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">npx -y garmin-mcp-unofficial setup --auth</text>
+</svg>
