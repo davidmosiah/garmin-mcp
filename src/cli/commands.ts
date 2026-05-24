@@ -117,9 +117,6 @@ function safeDoctorStatus(status: Awaited<ReturnType<typeof buildConnectionStatu
       has_refresh_token: raw.token.has_refresh_token,
       has_di_token: raw.token.has_di_token
     } : undefined,
-    oauth: raw.oauth ? {
-      scope_status: raw.oauth.scope_status
-    } : undefined,
     cache: raw.cache ? {
       enabled: Boolean(raw.cache.enabled)
     } : undefined,
@@ -133,9 +130,9 @@ function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>):
   const fail = "✗";
   const info = "·";
   const check = (passed: boolean) => (passed ? ok : fail);
-  const line = (mark: string, label: string, detail?: string) => {
+  const line = (mark: string, label: string, _detail?: string) => {
     const labelCol = label.padEnd(28);
-    console.log(`  ${mark}  ${labelCol}${detail ? `  ${detail}` : ""}`);
+    console.log(`  ${mark}  ${labelCol}`);
   };
 
   console.log("Garmin MCP · Doctor");
