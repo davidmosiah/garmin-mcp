@@ -93,25 +93,39 @@ function parseDoctorOptions(args: string[]) {
 
 function safeDoctorStatus(status: Awaited<ReturnType<typeof buildConnectionStatus>>): unknown {
   const raw = status as Record<string, any>;
-  const safe = JSON.parse(JSON.stringify(raw));
-  if (safe.config) delete safe.config.path;
-  if (safe.token) {
-    delete safe.token.path;
-    delete safe.token.display_name;
-  }
-  if (safe.cache) delete safe.cache.path;
-  if (safe.oauth) {
-    safe.oauth = {
-      scope_status: safe.oauth.scope_status,
-      granted_scope_count: Array.isArray(safe.oauth.granted_scopes) ? safe.oauth.granted_scopes.length : 0,
-      missing_recommended_scope_count: Array.isArray(safe.oauth.missing_recommended_scopes) ? safe.oauth.missing_recommended_scopes.length : 0,
-    };
-  }
-  if (safe.client_checks?.hermes) {
-    delete safe.client_checks.hermes.config_path;
-    delete safe.client_checks.hermes.skill_path;
-  }
-  return safe;
+  const hermes = raw.client_checks?.hermes;
+  const safeHermes = hermes ? Object.fromEntries(
+    Object.entries(hermes).filter(([key]) => key !== "config_path" && key !== "skill_path")
+  ) : undefined;
+  return {
+    ok: Boolean(raw.ok),
+    client: raw.client,
+    node: raw.node,
+    required_env: raw.required_env,
+    missing_env: raw.missing_env,
+    automatic_auth_supported: Boolean(raw.automatic_auth_supported),
+    privacy_mode: raw.privacy_mode,
+    config: raw.config ? {
+      exists: Boolean(raw.config.exists),
+      source: raw.config.source
+    } : undefined,
+    token: raw.token ? {
+      exists: Boolean(raw.token.exists),
+      readable: Boolean(raw.token.readable),
+      secure_permissions: raw.token.secure_permissions,
+      expired: raw.token.expired,
+      has_refresh_token: raw.token.has_refresh_token,
+      has_di_token: raw.token.has_di_token
+    } : undefined,
+    oauth: raw.oauth ? {
+      scope_status: raw.oauth.scope_status
+    } : undefined,
+    cache: raw.cache ? {
+      enabled: Boolean(raw.cache.enabled)
+    } : undefined,
+    client_checks: safeHermes ? { hermes: safeHermes } : undefined,
+    next_steps: raw.next_steps
+  };
 }
 
 function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>): void {
