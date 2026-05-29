@@ -40,7 +40,7 @@ export function buildCapabilities() {
     recommended_agent_flow: [
       "Call garmin_agent_manifest when installing or operating inside a server agent such as Hermes.",
       "Call garmin_connection_status before calling Garmin data tools.",
-      "If setup is incomplete, guide the user through setup, auth --install-helper and doctor.",
+      "If setup is incomplete, guide the user through setup, auth and doctor.",
       "Use garmin_daily_summary or garmin_weekly_summary before low-level endpoint tools.",
       "Use garmin_wellness_context when handing readiness, sleep, Body Battery and load context to Exercise Catalog.",
       "Treat health data as sensitive; avoid raw payloads unless explicitly requested.",

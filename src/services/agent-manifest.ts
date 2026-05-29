@@ -74,7 +74,7 @@ export function buildAgentManifest(client: AgentClientName = "generic") {
     },
     agent_rules: [
       "Call garmin_connection_status and garmin_data_inventory before Garmin data tools.",
-      "If setup is incomplete, guide the user through setup, auth --install-helper and doctor instead of guessing token state.",
+      "If setup is incomplete, guide the user through setup, auth and doctor instead of guessing token state.",
       "Treat Garmin health data as sensitive. Do not expose raw payloads unless the user asks for raw mode.",
       "Do not ask users to paste Garmin passwords or tokens into agent chat. Run local auth instead.",
       "Explain that this is unofficial Garmin Connect personal mode, not Garmin Health API partnership access.",
@@ -83,8 +83,8 @@ export function buildAgentManifest(client: AgentClientName = "generic") {
       "Do not provide medical diagnosis or treatment instructions. Frame outputs as health/training context."
     ],
     troubleshooting: [
-      { symptom: "token file missing", action: "Run `garmin-mcp-server auth --install-helper` locally. The helper supports MFA prompts." },
-      { symptom: "401, expired token, or refresh failure", action: "Run `garmin-mcp-server auth --install-helper` again. Garmin can invalidate personal tokens." },
+      { symptom: "token file missing", action: "Run `garmin-mcp-server auth` locally. The built-in login supports MFA prompts (no Python needed)." },
+      { symptom: "401, expired token, or refresh failure", action: "Run `garmin-mcp-server auth` again. Garmin can invalidate personal tokens." },
       { symptom: "429 or repeated auth failures", action: "Back off, avoid repeated logins, then retry later. Garmin can rate-limit private auth." },
       { symptom: "endpoint changed or 404", action: "Treat as Garmin Connect drift. Open an issue with the endpoint and sanitized error." },
       { symptom: "Hermes configured but tools unavailable", action: "Run `/reload-mcp` or `hermes mcp test garmin`; do not restart gateway for normal reload." }
@@ -140,7 +140,7 @@ Use this skill whenever a user asks Hermes to inspect Garmin activity, sleep, he
 
 ## Rules
 - Start with \`mcp_garmin_garmin_connection_status\`.
-- If tokens are missing, ask the user to run \`garmin-mcp-server auth --install-helper\` locally. Never ask them to paste Garmin passwords or token values into chat.
+- If tokens are missing, ask the user to run \`garmin-mcp-server auth\` locally. Never ask them to paste Garmin passwords or token values into chat.
 - Prefer \`mcp_garmin_garmin_daily_summary\` and \`mcp_garmin_garmin_weekly_summary\` before low-level endpoint calls.
 - Treat Garmin data as sensitive. Do not request raw payloads unless the user explicitly asks.
 - Explain that this is unofficial Garmin Connect personal mode and can break if Garmin changes private auth or endpoints.

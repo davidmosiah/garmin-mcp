@@ -12,7 +12,8 @@ try {
   assert.equal(missing.ok, false);
   assert.equal(missing.ready_for_garmin_api, false);
   assert.deepEqual(missing.missing_env, []);
-  assert.ok(missing.next_steps.some((step) => step.includes('auth --install-helper')));
+  assert.ok(missing.next_steps.some((step) => step.includes('garmin-mcp-server auth')));
+  assert.ok(missing.next_steps.some((step) => step.includes('no Python')));
 
   const tokenPath = join(dir, 'garmin_tokens.json');
   writeFileSync(tokenPath, JSON.stringify({
@@ -51,7 +52,7 @@ try {
   assert.equal(doctor.status, 0, doctor.stderr);
   const doctorPayload = JSON.parse(doctor.stdout);
   assert.equal(doctorPayload.ok, false);
-  assert.ok(doctorPayload.next_steps.some((step) => step.includes('auth --install-helper')));
+  assert.ok(doctorPayload.next_steps.some((step) => step.includes('garmin-mcp-server auth')));
 
   const typo = spawnSync(process.execPath, ['dist/index.js', 'docter'], {
     encoding: 'utf8',
@@ -63,7 +64,9 @@ try {
   assert.equal(typo.status, 1);
   assert.match(typo.stderr, /Unknown command: docter/);
 
-  const authWithoutHelper = spawnSync(process.execPath, ['dist/index.js', 'auth', '--json'], {
+  // Native (default) auth in --json mode fails cleanly when credentials are absent,
+  // without ever touching Python.
+  const authNativeNoCreds = spawnSync(process.execPath, ['dist/index.js', 'auth', '--json'], {
     encoding: 'utf8',
     env: {
       PATH: process.env.PATH,
@@ -71,10 +74,25 @@ try {
       PYTHON: '/bin/false'
     }
   });
-  assert.equal(authWithoutHelper.status, 1);
-  const authPayload = JSON.parse(authWithoutHelper.stdout);
-  assert.equal(authPayload.ok, false);
-  assert.doesNotMatch(authPayload.error, new RegExp('at .*dist/'));
+  assert.equal(authNativeNoCreds.status, 1);
+  const authNativePayload = JSON.parse(authNativeNoCreds.stdout);
+  assert.equal(authNativePayload.ok, false);
+  assert.match(authNativePayload.error, /GARMIN_EMAIL/);
+  assert.doesNotMatch(authNativePayload.error, new RegExp('at .*dist/'));
+
+  // Legacy Python helper path still reports a clean error when python is missing.
+  const authPythonMissing = spawnSync(process.execPath, ['dist/index.js', 'auth', '--use-python', '--json'], {
+    encoding: 'utf8',
+    env: {
+      PATH: process.env.PATH,
+      HOME: dir,
+      PYTHON: '/bin/false'
+    }
+  });
+  assert.equal(authPythonMissing.status, 1);
+  const authPythonPayload = JSON.parse(authPythonMissing.stdout);
+  assert.equal(authPythonPayload.ok, false);
+  assert.doesNotMatch(authPythonPayload.error, new RegExp('at .*dist/'));
 
   const setup = spawnSync(process.execPath, [
     'dist/index.js',
@@ -100,7 +118,7 @@ try {
   const setupPayload = JSON.parse(setup.stdout);
   assert.equal(setupPayload.ok, true);
   assert.equal(setupPayload.auth_started, false);
-  assert.match(setupPayload.next_step, /auth --install-helper/);
+  assert.match(setupPayload.next_step, /garmin-mcp-server auth/);
   assert.match(setupPayload.config_path, /config\.json$/);
   assert.match(setupPayload.client_config_path, /generic\.json$/);
 

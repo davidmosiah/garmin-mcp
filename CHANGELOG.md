@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Self-contained `auth` command (no Python helper required).** `garmin-mcp-server auth` now runs a pure-Node Garmin Connect login — SSO sign-in, MFA, and OAuth1→OAuth2 ticket exchange are implemented in `src/cli/garmin-login.ts` using `node:crypto` for HMAC-SHA1 signing. Tokens are written to `~/.garmin-mcp/garmin_tokens.json` (0600) in the same shape the connector already consumes (`di_token` / `di_refresh_token` / `di_client_id`).
+- **`auth --json`** non-interactive login via `GARMIN_EMAIL` / `GARMIN_PASSWORD` (+ `GARMIN_MFA_CODE`).
+- `scripts/native-auth-test.mjs` — verifies OAuth1 signature correctness against an independent recomputation, token-field mapping, full mocked login (happy path + MFA), error paths, and the CLI no-credentials failure.
+
+### Changed
+
+- The legacy Python `garminconnect` flow is now opt-in via `auth --use-python` (or `auth --install-helper` to install the package). Default `auth` no longer requires Python. Docs, help text, doctor hints, and agent guidance updated accordingly.
+
 ## 0.4.3 - 2026-05-20
 
 ### Added

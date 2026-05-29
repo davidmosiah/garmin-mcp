@@ -17,12 +17,12 @@ npx -y garmin-mcp-unofficial setup --client hermes
 ## 2. Connect Garmin locally
 
 ```bash
-npx -y garmin-mcp-unofficial auth --install-helper
+npx -y garmin-mcp-unofficial auth
 ```
 
-The helper prompts locally for Garmin email, password and MFA when needed. The MCP does not store your Garmin password.
+The built-in login prompts locally for Garmin email, password and MFA when needed — no Python required. The MCP does not store your Garmin password.
 
-If Python package installation is blocked by Homebrew or PEP 668, the helper creates an isolated virtualenv under `~/.garmin-mcp/venv` automatically.
+Prefer the legacy Python helper? Use `auth --use-python`, or `auth --install-helper` to install the `garminconnect` package (it falls back to an isolated virtualenv under `~/.garmin-mcp/venv` if Homebrew or PEP 668 blocks the install).
 
 ## 3. Check readiness
 

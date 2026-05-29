@@ -62,7 +62,7 @@ export async function runSetupCommand(args: string[]): Promise<number> {
   }
 
   if (!options.noAuth) {
-    return runAuthCommand(options.json ? ["--json", "--install-helper"] : ["--install-helper"]);
+    return runAuthCommand(options.json ? ["--json"] : []);
   }
   return 0;
 }
@@ -253,7 +253,7 @@ function ensureReloadHint(text: string): string {
 }
 
 function setupNextStep(client: AgentClientName, noAuth: boolean): string {
-  const auth = noAuth ? "Run `garmin-mcp-server auth --install-helper`, then " : "";
+  const auth = noAuth ? "Run `garmin-mcp-server auth`, then " : "";
   if (client === "hermes") {
     return `${auth}run \`garmin-mcp-server doctor --client hermes\`, then use \`/reload-mcp\` or \`hermes mcp test garmin\`.`;
   }

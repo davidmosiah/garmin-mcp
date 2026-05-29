@@ -81,6 +81,7 @@ export const WeeklySummaryInputSchema = z.object({
 export const AuthInstructionsOutputSchema = z.object({
   auth_model: z.string(),
   command: z.string(),
+  legacy_python_command: z.string().optional(),
   token_path: z.string(),
   stores_password: z.boolean(),
   notes: z.array(z.string()),

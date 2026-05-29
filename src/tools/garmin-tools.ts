@@ -253,7 +253,7 @@ export function registerGarminTools(server: McpServer): void {
         title: hasToken ? "(done) Local Garmin token present" : "Run the local auth helper",
         action: hasToken
           ? `Tokens stored at ${config.tokenPath}. Auto-refresh handled by the connector.`
-          : "Run `garmin-mcp-server auth --install-helper`. The helper does the unofficial Garmin Connect auth locally (handles MFA when needed). Stores tokens user-only.",
+          : "Run `garmin-mcp-server auth`. The built-in login does the unofficial Garmin Connect auth locally (no Python needed, handles MFA). Stores tokens user-only.",
         done: hasToken,
       },
       {
@@ -496,11 +496,13 @@ export function registerGarminTools(server: McpServer): void {
     const config = getConfig();
     const output = {
       auth_model: "Unofficial Garmin Connect personal token mode",
-      command: "npx -y garmin-mcp-unofficial auth --install-helper",
+      command: "npx -y garmin-mcp-unofficial auth",
+      legacy_python_command: "npx -y garmin-mcp-unofficial auth --use-python",
       token_path: config.tokenPath,
       stores_password: false,
       notes: [
-        "The auth helper prompts locally for Garmin email, password and MFA when needed.",
+        "`auth` runs a self-contained Node login (no Python required) and prompts locally for Garmin email, password and MFA when needed.",
+        "`auth --use-python` falls back to the legacy garminconnect helper if you prefer it.",
         "The MCP stores Garmin Connect tokens locally with user-only permissions and never returns token values from tools.",
         "This is not official Garmin Health API partnership access.",
         "Garmin can change private auth or endpoints; failures should be treated as integration drift, not user error."
@@ -613,7 +615,7 @@ export function registerGarminTools(server: McpServer): void {
   }, async ({ response_format }) => {
     try {
       const result = await client().clearLocalTokens();
-      const output = { ...result, note: "Local Garmin MCP tokens were deleted. Run garmin-mcp-server auth --install-helper before future API calls." };
+      const output = { ...result, note: "Local Garmin MCP tokens were deleted. Run garmin-mcp-server auth before future API calls." };
       return makeResponse(output, response_format, bulletList("Garmin Local Tokens Deleted", output));
     } catch (error) {
       return makeError((error as Error).message);

@@ -2,10 +2,113 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createInterface as createPromptInterface } from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
 import { getConfig } from "../services/config.js";
+import { TokenStore } from "../services/token-store.js";
+import { nativeGarminLogin } from "./garmin-login.js";
 
 export async function runAuthCommand(args: string[]): Promise<number> {
   const json = args.includes("--json");
+  // Default path is the self-contained Node login. `--use-python` (or the
+  // legacy `--install-helper`) opts into the Python `garminconnect` helper.
+  const usePython = args.includes("--use-python") || args.includes("--install-helper");
+  if (!usePython) {
+    return runNativeAuth(args, json);
+  }
+  return runPythonAuth(args, json);
+}
+
+/**
+ * Self-contained login: no Python helper, no external script. Prompts for the
+ * Garmin email/password/MFA in this terminal and writes the same token set the
+ * connector reads, matching how the other Delx wellness connectors store tokens
+ * locally (~/.garmin-mcp/garmin_tokens.json, 0600).
+ */
+async function runNativeAuth(args: string[], json: boolean): Promise<number> {
+  const config = getConfig();
+  let credentials: { email: string; password: string };
+  try {
+    credentials = await collectCredentials(json);
+  } catch (error) {
+    return printAuthFailure(json, (error as Error).message);
+  }
+
+  try {
+    const tokens = await nativeGarminLogin({
+      email: credentials.email,
+      password: credentials.password,
+      domain: config.domain,
+      promptMfa: json ? promptMfaFromEnv : promptMfaInteractive
+    });
+    const store = new TokenStore(config.tokenPath);
+    await store.withLock(async () => {
+      const existing = (await store.read()) ?? {};
+      await store.write({ ...existing, ...tokens, updated_at: new Date().toISOString() });
+    });
+    chmodSync(config.tokenPath, 0o600);
+    return printAuthSuccess(json, config.tokenPath);
+  } catch (error) {
+    return printAuthFailure(json, `Garmin login failed: ${(error as Error).message}`);
+  }
+}
+
+async function collectCredentials(json: boolean): Promise<{ email: string; password: string }> {
+  const email = process.env.GARMIN_EMAIL ?? (json ? undefined : await promptLine("Garmin email: "));
+  const password = process.env.GARMIN_PASSWORD ?? (json ? undefined : await promptHidden("Garmin password: "));
+  if (!email || !password) {
+    throw new Error(
+      json
+        ? "Set GARMIN_EMAIL and GARMIN_PASSWORD (and GARMIN_MFA_CODE if prompted) to run `auth --json`, or run `garmin-mcp-server auth` interactively."
+        : "Garmin email and password are required."
+    );
+  }
+  return { email, password };
+}
+
+async function promptLine(question: string): Promise<string> {
+  const rl = createPromptInterface({ input, output });
+  try {
+    return (await rl.question(question)).trim();
+  } finally {
+    rl.close();
+  }
+}
+
+async function promptHidden(question: string): Promise<string> {
+  const rl = createPromptInterface({ input, output });
+  // Mask typed characters by overriding readline's output writer.
+  const writable = rl as unknown as { _writeToOutput?: (s: string) => void };
+  const original = writable._writeToOutput?.bind(rl);
+  if (original) {
+    writable._writeToOutput = (chunk: string) => {
+      if (chunk.includes("\n") || chunk.includes("\r") || chunk.startsWith(question)) original(chunk);
+      else original("*".repeat(chunk.length));
+    };
+  }
+  try {
+    return (await rl.question(question)).trim();
+  } finally {
+    if (original) writable._writeToOutput = original;
+    rl.close();
+  }
+}
+
+async function promptMfaInteractive(): Promise<string> {
+  return promptLine("Garmin MFA code: ");
+}
+
+async function promptMfaFromEnv(): Promise<string> {
+  const code = process.env.GARMIN_MFA_CODE;
+  if (!code) {
+    throw new Error("Garmin MFA required but GARMIN_MFA_CODE is not set. Run interactively or provide GARMIN_MFA_CODE.");
+  }
+  return code;
+}
+
+async function runPythonAuth(args: string[], json: boolean): Promise<number> {
+  // Only --install-helper installs the garminconnect package; --use-python alone
+  // expects it to already be present.
   const installHelper = args.includes("--install-helper");
   const config = getConfig();
 
@@ -36,33 +139,37 @@ export async function runAuthCommand(args: string[]): Promise<number> {
   }
 
   try {
-    chmodSync(config.tokenPath, 0o600);
-    const stat = statSync(config.tokenPath);
-    const payload = JSON.parse(readFileSync(config.tokenPath, "utf8")) as Record<string, unknown>;
-    const output = {
-      ok: true,
-      token_path: config.tokenPath,
-      permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
-      has_di_token: typeof payload.di_token === "string" && payload.di_token.length > 0,
-      has_refresh_token: typeof payload.di_refresh_token === "string" && payload.di_refresh_token.length > 0,
-      display_name: typeof payload.display_name === "string" ? payload.display_name : undefined,
-      next_step: "Run `garmin-mcp-server doctor`, then start your MCP client."
-    };
-    if (json) console.log(JSON.stringify(output, null, 2));
-    else {
-      console.log("");
-      console.log("✓ Garmin connected");
-      console.log("");
-      console.log(`  Token file:   ${output.token_path}`);
-      console.log(`  Permissions:  ${output.permissions}`);
-      if (output.display_name) console.log(`  Display name: ${output.display_name}`);
-      console.log("");
-      console.log(`→ Next: ${output.next_step}`);
-    }
-    return 0;
+    return printAuthSuccess(json, config.tokenPath);
   } catch (error) {
     return printAuthFailure(json, `Login finished but token file could not be inspected: ${(error as Error).message}`);
   }
+}
+
+function printAuthSuccess(json: boolean, tokenPath: string): number {
+  chmodSync(tokenPath, 0o600);
+  const stat = statSync(tokenPath);
+  const payload = JSON.parse(readFileSync(tokenPath, "utf8")) as Record<string, unknown>;
+  const result = {
+    ok: true,
+    token_path: tokenPath,
+    permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
+    has_di_token: typeof payload.di_token === "string" && payload.di_token.length > 0,
+    has_refresh_token: typeof payload.di_refresh_token === "string" && payload.di_refresh_token.length > 0,
+    display_name: typeof payload.display_name === "string" ? payload.display_name : undefined,
+    next_step: "Run `garmin-mcp-server doctor`, then start your MCP client."
+  };
+  if (json) console.log(JSON.stringify(result, null, 2));
+  else {
+    console.log("");
+    console.log("✓ Garmin connected");
+    console.log("");
+    console.log(`  Token file:   ${result.token_path}`);
+    console.log(`  Permissions:  ${result.permissions}`);
+    if (result.display_name) console.log(`  Display name: ${result.display_name}`);
+    console.log("");
+    console.log(`→ Next: ${result.next_step}`);
+  }
+  return 0;
 }
 
 function printAuthFailure(json: boolean, message: string): number {

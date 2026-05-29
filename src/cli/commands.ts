@@ -142,7 +142,7 @@ function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>):
   console.log("Checks");
   line(check(status.node.supported), "Node.js >=20", status.node.supported ? undefined : `version ${status.node.version}`);
   line(status.config.exists ? ok : info, "Local config", status.config.exists ? status.config.source : "optional (none yet)");
-  line(check(status.token.exists), "Token file", status.token.exists ? "present" : "missing — run auth --install-helper");
+  line(check(status.token.exists), "Token file", status.token.exists ? "present" : "missing — run auth");
   if (status.token.exists) {
     line(status.token.secure_permissions === false ? fail : ok, "Token permissions", status.token.secure_permissions === false ? "insecure (chmod 600)" : undefined);
     line(check(Boolean(status.token.has_di_token)), "DI token", status.token.has_di_token ? undefined : "missing");
@@ -182,9 +182,12 @@ Usage:
   garmin-mcp-server doctor          Check setup and next steps
   garmin-mcp-server doctor --json   Print setup status as JSON
   garmin-mcp-server doctor --client hermes
-  garmin-mcp-server auth            Login locally through the helper and save ~/.garmin-mcp/garmin_tokens.json
+  garmin-mcp-server auth            Log in to Garmin locally (no Python needed) and save ~/.garmin-mcp/garmin_tokens.json
+  garmin-mcp-server auth --json     Non-interactive login using GARMIN_EMAIL / GARMIN_PASSWORD (+ GARMIN_MFA_CODE)
+  garmin-mcp-server auth --use-python
+                                  Use the legacy Python garminconnect helper instead of the built-in login
   garmin-mcp-server auth --install-helper
-                                  Install the Python garminconnect helper if missing
+                                  Alias of --use-python: install the Python garminconnect helper if missing
   garmin-mcp-server onboarding      Print the shared Delx wellness onboarding flow (11 questions)
   garmin-mcp-server onboarding --pt-BR
                                   Print the onboarding flow in pt-BR

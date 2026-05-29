@@ -204,10 +204,10 @@ function buildCompatibilityAuthStatus(token: ConnectionStatus["token"]): Connect
 function buildNextSteps(input: { token: ConnectionStatus["token"]; nodeSupported: boolean }): string[] {
   const steps: string[] = [];
   if (!input.nodeSupported) steps.push("Install Node.js 20 or newer.");
-  if (!input.token.exists) steps.push("Run `garmin-mcp-server auth --install-helper` and log in to Garmin locally. Tokens are saved under ~/.garmin-mcp with 0600 permissions.");
+  if (!input.token.exists) steps.push("Run `garmin-mcp-server auth` and log in to Garmin locally (no Python needed). Tokens are saved under ~/.garmin-mcp with 0600 permissions.");
   else if (!input.token.readable) steps.push(`Fix token file readability at ${input.token.path}.`);
   else if (input.token.secure_permissions === false) steps.push(`Restrict token file permissions with: chmod 600 ${input.token.path}`);
-  else if (!input.token.has_di_token) steps.push("Token file exists but does not contain a DI token. Run `garmin-mcp-server auth --install-helper` again.");
+  else if (!input.token.has_di_token) steps.push("Token file exists but does not contain a DI token. Run `garmin-mcp-server auth` again.");
   if (steps.length === 0) steps.push("Ready. Add this MCP server to your agent and start with garmin_daily_summary.");
   return steps;
 }

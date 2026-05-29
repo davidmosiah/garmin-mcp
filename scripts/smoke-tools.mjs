@@ -58,7 +58,8 @@ try {
 
   const authResult = await client.callTool({ name: 'garmin_auth_instructions', arguments: { response_format: 'json' } });
   assert.equal(authResult.structuredContent?.stores_password, false);
-  assert.match(authResult.structuredContent?.command, /auth --install-helper/);
+  assert.match(authResult.structuredContent?.command, /garmin-mcp-unofficial auth$/);
+  assert.match(authResult.structuredContent?.legacy_python_command, /auth --use-python/);
 
   const inventoryResult = await client.callTool({ name: 'garmin_data_inventory', arguments: { response_format: 'json' } });
   assert.equal(inventoryResult.structuredContent?.kind, 'data_inventory');

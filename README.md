@@ -59,7 +59,7 @@ No Garmin developer app is required. `setup` only writes local MCP configuration
 
 ```bash
 npx -y garmin-mcp-unofficial setup            # writes local config
-npx -y garmin-mcp-unofficial auth --install-helper   # installs Garmin login helper, prompts for credentials locally
+npx -y garmin-mcp-unofficial auth             # built-in login, prompts for credentials locally (no Python needed)
 npx -y garmin-mcp-unofficial doctor           # verifies you're ready
 ```
 
@@ -69,9 +69,9 @@ Or one shot:
 npx -y garmin-mcp-unofficial setup --auth
 ```
 
-The auth helper prompts locally for Garmin email, password and MFA when needed. The MCP **does not store your Garmin password** — only Garmin Connect tokens, saved at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions.
+`auth` runs a self-contained Node login and prompts locally for Garmin email, password and MFA when needed. The MCP **does not store your Garmin password** — only Garmin Connect tokens, saved at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions.
 
-If macOS/Homebrew Python blocks helper installs, `--install-helper` falls back to an isolated virtualenv under `~/.garmin-mcp/venv` instead of asking you to debug Python packaging.
+Prefer the old Python flow? `auth --use-python` (or `auth --install-helper` to install the `garminconnect` package, with an isolated virtualenv fallback under `~/.garmin-mcp/venv`) still works.
 
 Then add this to your MCP client config:
 
@@ -193,7 +193,7 @@ GARMIN_DOMAIN=garmin.com                     # or garmin.cn for China accounts
 
 ```bash
 npx -y garmin-mcp-unofficial setup --client hermes
-npx -y garmin-mcp-unofficial auth --install-helper
+npx -y garmin-mcp-unofficial auth
 npx -y garmin-mcp-unofficial doctor --client hermes
 hermes mcp test garmin
 ```
@@ -207,7 +207,7 @@ Paste this into your agent when you want it to install the bridge for you:
 ```text
 Install the unofficial Garmin MCP server for me.
 Repository: https://github.com/davidmosiah/garminmcp
-Run setup, then auth --install-helper, then doctor.
+Run setup, then auth, then doctor.
 If this is Hermes, use setup --client hermes and reload MCP with /reload-mcp or hermes mcp test garmin.
 Never ask me to paste Garmin passwords, tokens or raw private payloads into chat.
 Start with garmin_connection_status, then garmin_daily_summary.
@@ -218,7 +218,7 @@ This is not medical advice.
 
 - Node.js 20+
 - A Garmin Connect account with active devices
-- Python 3 available locally (used by the auth helper; an isolated venv is created if needed)
+- Python 3 only if you opt into the legacy `auth --use-python` helper; the default `auth` login is pure Node
 
 ## Development
 
