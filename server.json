@@ -3,7 +3,7 @@
   "name": "io.github.davidmosiah/garminmcp",
   "description": "Privacy-first, unofficial Garmin Connect MCP server for AI health, sleep, activity, recovery and training agents.",
   "repository": {
-    "url": "https://github.com/davidmosiah/garminmcp",
+    "url": "https://github.com/davidmosiah/garmin-mcp",
     "source": "github"
   },
   "version": "0.5.0",

@@ -1,6 +1,6 @@
 # Garmin MCP
 Unofficial local-first Garmin Connect MCP server for AI sleep, HRV, Body Battery, stress and training-readiness agents.
-Repository: https://github.com/davidmosiah/garminmcp
+Repository: https://github.com/davidmosiah/garmin-mcp
 Homepage: https://wellness.delx.ai/connectors/garmin
 NPM: https://www.npmjs.com/package/garmin-mcp-unofficial
 Primary command: npm exec --yes --package=garmin-mcp-unofficial -- garmin-mcp-server doctor

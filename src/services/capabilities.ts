@@ -63,7 +63,7 @@ export function buildCapabilities() {
       "Add optional official Garmin Health API mode if Garmin partner credentials are available."
     ],
     links: {
-      github: "https://github.com/davidmosiah/garminmcp",
+      github: "https://github.com/davidmosiah/garmin-mcp",
       docs: GARMIN_MCP_DOCS_URL,
       npm: "https://www.npmjs.com/package/garmin-mcp-unofficial",
       garmin_developer_program: GARMIN_DEVELOPER_PORTAL_URL,

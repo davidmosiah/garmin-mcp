@@ -90,7 +90,7 @@ export function buildAgentManifest(client: AgentClientName = "generic") {
       { symptom: "Hermes configured but tools unavailable", action: "Run `/reload-mcp` or `hermes mcp test garmin`; do not restart gateway for normal reload." }
     ],
     links: {
-      github: "https://github.com/davidmosiah/garminmcp",
+      github: "https://github.com/davidmosiah/garmin-mcp",
       docs: GARMIN_MCP_DOCS_URL,
       npm: "https://www.npmjs.com/package/garmin-mcp-unofficial",
       garmin_connect: "https://connect.garmin.com/",
