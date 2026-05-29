@@ -22,6 +22,8 @@ npx -y garmin-mcp-unofficial auth
 
 The built-in login prompts locally for Garmin email, password and MFA when needed — no Python required. The MCP does not store your Garmin password.
 
+See the [auth quickstart walkthrough](../examples/auth-quickstart.md) for the real terminal output of `auth`, `auth --json` and `doctor`.
+
 Prefer the legacy Python helper? Use `auth --use-python`, or `auth --install-helper` to install the `garminconnect` package (it falls back to an isolated virtualenv under `~/.garmin-mcp/venv` if Homebrew or PEP 668 blocks the install).
 
 ## 3. Check readiness

@@ -6,19 +6,19 @@
     "url": "https://github.com/davidmosiah/garmin-mcp",
     "source": "github"
   },
-  "version": "0.5.0",
+  "version": "0.5.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "garmin-mcp-unofficial",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "GARMIN_TOKEN_PATH",
-          "description": "Optional local path for Garmin Connect tokens. Defaults to ~/.garmin-mcp/garmin_tokens.json. Create it with garmin-mcp-server auth --install-helper.",
+          "description": "Optional local path for Garmin Connect tokens. Defaults to ~/.garmin-mcp/garmin_tokens.json. Create it with garmin-mcp-server auth (self-contained Node login, no Python).",
           "isRequired": false,
           "format": "string",
           "isSecret": false

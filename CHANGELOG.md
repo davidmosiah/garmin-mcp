@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 - 2026-05-29
+
+### Added
+
+- **`examples/auth-quickstart.md`** — end-to-end walkthrough of the self-contained `auth` command with real captured terminal output: `--help`, interactive `auth`, non-interactive `auth --json` (success and missing-credentials error), and the post-auth `doctor` `READY` report. Linked from the README and `docs/quickstart.md` so the no-Python login flow is discoverable.
+
+### Changed
+
+- `server.json` `GARMIN_TOKEN_PATH` description now points at the self-contained `auth` (no Python) instead of the legacy `auth --install-helper`.
+
+## 0.5.0 - 2026-05-28
 
 ### Added
 

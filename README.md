@@ -71,6 +71,8 @@ npx -y garmin-mcp-unofficial setup --auth
 
 `auth` runs a self-contained Node login and prompts locally for Garmin email, password and MFA when needed. The MCP **does not store your Garmin password** — only Garmin Connect tokens, saved at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions.
 
+> 📺 **Want to see exactly what each command prints?** The [auth quickstart walkthrough](examples/auth-quickstart.md) shows real `--help`, `auth`, `auth --json` and `doctor` output for the full first-call journey.
+
 Prefer the old Python flow? `auth --use-python` (or `auth --install-helper` to install the `garminconnect` package, with an isolated virtualenv fallback under `~/.garmin-mcp/venv`) still works.
 
 Then add this to your MCP client config:
