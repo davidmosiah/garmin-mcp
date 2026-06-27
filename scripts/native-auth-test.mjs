@@ -70,7 +70,12 @@ function mockFetch(spec) {
       return new Response('', { status: 200, headers: { 'set-cookie': 'GARMIN-SSO=1; Path=/' } });
     }
     if (u.includes('/sso/mobile/api/login')) {
-      return new Response(JSON.stringify(spec.login), { status: 200, headers: { 'content-type': 'application/json' } });
+      const body = spec.loginRaw ?? JSON.stringify(spec.login);
+      return new Response(body, {
+        status: spec.loginStatus ?? 200,
+        statusText: spec.loginStatusText,
+        headers: spec.loginHeaders ?? { 'content-type': spec.loginRaw ? 'text/html' : 'application/json' }
+      });
     }
     if (u.includes('/sso/mobile/api/mfa/verifyCode')) {
       return new Response(JSON.stringify(spec.mfa), { status: 200, headers: { 'content-type': 'application/json' } });
@@ -156,7 +161,61 @@ function mockFetch(spec) {
   );
 }
 
-// ---- 7. CLI: auth --json without credentials fails cleanly (no Python) -------
+// ---- 7. Garmin/Cloudflare throttling surfaces actionable guidance -----------
+{
+  const { fetchImpl } = mockFetch({
+    loginStatus: 429,
+    loginStatusText: 'Too Many Requests',
+    login: { error: 'rate_limited' }
+  });
+  await assert.rejects(
+    () => nativeGarminLogin({ email: 'a@b.com', password: 'pw' }, { fetchImpl, getConsumer: async () => CONSUMER }),
+    (error) => {
+      assert.match(error.message, /HTTP 429 Too Many Requests/);
+      assert.match(error.message, /rate-limiting|Cloudflare-challenging/);
+      assert.match(error.message, /Stop retrying/);
+      assert.doesNotMatch(error.message, /Garmin login failed: Garmin login failed/);
+      return true;
+    }
+  );
+}
+
+// ---- 8. Non-JSON Cloudflare challenge is not reported as UNKNOWN ------------
+{
+  const { fetchImpl } = mockFetch({
+    loginStatus: 403,
+    loginStatusText: 'Forbidden',
+    loginRaw: '<html><title>Just a moment...</title><body>Cloudflare cf_clearance required</body></html>'
+  });
+  await assert.rejects(
+    () => nativeGarminLogin({ email: 'a@b.com', password: 'pw' }, { fetchImpl, getConsumer: async () => CONSUMER }),
+    (error) => {
+      assert.match(error.message, /non-JSON response \(HTTP 403 Forbidden\)/);
+      assert.match(error.message, /Cloudflare-challenging/);
+      assert.doesNotMatch(error.message, /UNKNOWN/);
+      return true;
+    }
+  );
+}
+
+// ---- 9. JSON without responseStatus.type still gives the recovery path ------
+{
+  const { fetchImpl } = mockFetch({
+    login: { error: 'challenge_required', reason: 'missing cf_clearance' }
+  });
+  await assert.rejects(
+    () => nativeGarminLogin({ email: 'a@b.com', password: 'pw' }, { fetchImpl, getConsumer: async () => CONSUMER }),
+    (error) => {
+      assert.match(error.message, /Garmin SSO omitted responseStatus.type/);
+      assert.match(error.message, /Response keys: error, reason/);
+      assert.match(error.message, /Stop retrying/);
+      assert.doesNotMatch(error.message, /UNKNOWN/);
+      return true;
+    }
+  );
+}
+
+// ---- 10. CLI: auth --json without credentials fails cleanly (no Python) ------
 {
   const dir = mkdtempSync(join(tmpdir(), 'garmin-native-auth-'));
   try {

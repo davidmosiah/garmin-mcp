@@ -3,9 +3,10 @@ Repository: https://github.com/davidmosiah/garmin-mcp
 Docs: https://garminconnectmcp.vercel.app/
 Package: garmin-mcp-unofficial
 Install: npx -y garmin-mcp-unofficial setup
-Auth: npx -y garmin-mcp-unofficial auth --install-helper
+Auth: npx -y garmin-mcp-unofficial auth
 Doctor: npx -y garmin-mcp-unofficial doctor
 Human flow: no Garmin developer app is required; setup writes MCP config only; auth prompts locally for Garmin login and MFA.
+Auth failures: if HTTP 429, Cloudflare, or missing responseStatus.type appears, stop retrying and follow docs/auth.md. Do not paste cookies, tokens, passwords or cf_clearance into chat.
 Agent flow: call garmin_agent_manifest and garmin_connection_status before data tools. For Hermes, prefer setup --client hermes and reload MCP with /reload-mcp or hermes mcp test garmin.
 Important tools: garmin_connection_status, garmin_auth_instructions, garmin_daily_summary, garmin_weekly_summary, garmin_get_sleep_day, garmin_get_heart_day, garmin_get_hrv_day, garmin_get_body_battery_day, garmin_get_stress_day, garmin_list_activities.
 Boundary: unofficial Garmin Connect personal token mode, not official Garmin Health API partner access. No medical advice. No unrestricted raw sensor telemetry.

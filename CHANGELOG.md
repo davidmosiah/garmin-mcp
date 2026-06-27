@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.3 - 2026-06-27
+
+### Fixed
+
+- Native `auth` no longer collapses Garmin SSO rate-limit or bot-protection
+  responses into `UNKNOWN`. HTTP 429, Cloudflare-like non-JSON challenges and
+  JSON responses without `responseStatus.type` now return actionable guidance:
+  stop retrying, back off, retry from a normal browser-like network, or use the
+  legacy Python helper/trusted local token flow.
+- CLI auth failure output no longer double-prefixes nested messages as
+  `Garmin login failed: Garmin login failed: ...`.
+
+### Changed
+
+- Refresh README/docs into a shorter agent-first front door with a full
+  `docs/tools.md` reference and safer auth troubleshooting guidance.
+
 ## 0.5.2 - 2026-06-27
 
 ### Security

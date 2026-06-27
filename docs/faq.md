@@ -10,7 +10,7 @@ Garmin Health API access is partner-approved and oriented toward business/develo
 
 ## Do I need to create a Garmin developer app?
 
-No. For this personal local mode, you do not create a client ID, client secret, redirect URI or scopes. Run `setup`, then `auth --install-helper`.
+No. For this personal local mode, you do not create a client ID, client secret, redirect URI or scopes. Run `setup`, then `auth`.
 
 ## Does it store my Garmin password?
 
@@ -18,7 +18,14 @@ No. The auth helper prompts locally and stores Garmin Connect tokens, not your p
 
 ## Why are setup and auth separate?
 
-So non-technical users know exactly when Garmin credentials are requested. `setup` writes MCP config only. `auth --install-helper` starts local Garmin login. `setup --auth` is available for one-shot installs.
+So non-technical users know exactly when Garmin credentials are requested. `setup` writes MCP config only. `auth` starts local Garmin login. `setup --auth` is available for one-shot installs.
+
+## Why did auth mention HTTP 429, Cloudflare or missing responseStatus.type?
+
+Garmin's private mobile SSO endpoint can rate-limit or bot-challenge headless
+logins. Stop retrying for a while, confirm web/app login works, then retry from
+a normal residential/browser-like network. Do not paste cookies, passwords,
+tokens or `cf_clearance` into chat or GitHub issues.
 
 ## What data can agents read?
 

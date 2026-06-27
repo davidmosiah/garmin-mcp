@@ -9,10 +9,11 @@ MCP command: garmin-mcp-server
 - MCP registry name: io.github.davidmosiah/garminmcp
 - Start agents with garmin_connection_status and garmin_data_inventory before any data tool.
 - Read-only default tools: garmin_agent_manifest, garmin_capabilities, garmin_privacy_audit, garmin_connection_status, garmin_data_inventory, garmin_daily_summary, garmin_weekly_summary, garmin_cache_status.
-- Auth: personal Garmin Connect credentials (not OAuth — uses unofficial Connect web endpoints).
-- Auth env: GARMIN_USERNAME, GARMIN_PASSWORD, or GARMIN_TOKEN_PATH for cached session.
+- Auth: personal Garmin Connect credentials, prompted locally by `garmin-mcp-server auth` (not official Garmin Health API OAuth).
+- Auth env for non-interactive mode: GARMIN_EMAIL, GARMIN_PASSWORD, optional GARMIN_MFA_CODE, or GARMIN_TOKEN_PATH for an existing local token file.
+- Auth failures: if HTTP 429, Cloudflare, or missing responseStatus.type appears, tell the user to stop retrying and follow docs/auth.md; repeated headless retries can worsen throttling.
 - Optional env: GARMIN_PRIVACY_MODE (summary|structured|raw, default structured), GARMIN_CACHE, GARMIN_CACHE_PATH.
 - Note: ToS-fragile by design — Garmin does not publish a public OAuth API for consumer data.
 - Prefer JSON responses for automation and markdown responses for human summaries.
-- Tokens stay local under ~/.garminmcp/tokens.json (or equivalent) and should never be printed.
+- Tokens stay local under ~/.garmin-mcp/garmin_tokens.json (or GARMIN_TOKEN_PATH) and should never be printed.
 - Not medical advice. Use as trend context only — outputs are operational context, not medical, legal or financial advice.

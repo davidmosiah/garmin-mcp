@@ -4,7 +4,7 @@ Setup:
 
 ```bash
 npx -y garmin-mcp-unofficial setup --client hermes
-npx -y garmin-mcp-unofficial auth --install-helper
+npx -y garmin-mcp-unofficial auth
 npx -y garmin-mcp-unofficial doctor --client hermes
 ```
 

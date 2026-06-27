@@ -237,16 +237,15 @@ export function registerGarminTools(server: McpServer): void {
   }, async ({ response_format }) => {
     const config = getConfig();
     const status = await buildConnectionStatus();
-    const hasCredentials = Boolean(status.has_credentials);
-    const hasToken = Boolean(status.token_present);
+    const hasToken = Boolean(status.token.exists && status.token.readable && status.token.has_di_token);
     const steps = [
       {
         step: 1,
-        title: hasCredentials ? "(done) Garmin credentials configured" : "Configure Garmin Connect credentials",
-        action: hasCredentials
-          ? "GARMIN_USERNAME / GARMIN_PASSWORD are set (or stored locally via setup)."
-          : "Run `garmin-mcp-server setup` to store credentials locally, OR set GARMIN_USERNAME and GARMIN_PASSWORD env vars.",
-        done: hasCredentials,
+        title: status.config.exists ? "(done) Local MCP config checked" : "Create local MCP config",
+        action: status.config.exists
+          ? `Config source: ${status.config.source}.`
+          : "Run `garmin-mcp-server setup`. Setup writes MCP/client config only; it does not ask for or store your Garmin password.",
+        done: status.config.exists,
       },
       {
         step: 2,
@@ -268,7 +267,7 @@ export function registerGarminTools(server: McpServer): void {
     ];
     const payload = {
       ok: true,
-      ready: hasCredentials && hasToken,
+      ready: status.config.exists && hasToken,
       steps,
       next: steps.find((s) => !s.done) ?? steps[steps.length - 1],
       cross_connector_hints: [
@@ -502,6 +501,7 @@ export function registerGarminTools(server: McpServer): void {
       stores_password: false,
       notes: [
         "`auth` runs a self-contained Node login (no Python required) and prompts locally for Garmin email, password and MFA when needed.",
+        "If login reports HTTP 429, Cloudflare, or missing responseStatus.type, stop retrying and follow docs/auth.md; repeated attempts can worsen Garmin throttling.",
         "`auth --use-python` falls back to the legacy garminconnect helper if you prefer it.",
         "The MCP stores Garmin Connect tokens locally with user-only permissions and never returns token values from tools.",
         "This is not official Garmin Health API partnership access.",

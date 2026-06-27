@@ -23,6 +23,8 @@ const SSO_PAGE_USER_AGENT =
 
 const SSO_SUCCESSFUL = "SUCCESSFUL";
 const SSO_MFA_REQUIRED = "MFA_REQUIRED";
+const SSO_BLOCK_GUIDANCE =
+  "Garmin's private SSO endpoint may be rate-limiting or Cloudflare-challenging this headless login. Stop retrying for a while, then retry from a normal residential/browser-like network. If it keeps failing, use the legacy `auth --use-python` / `auth --install-helper` helper or place a valid Garmin token file from a trusted local flow at ~/.garmin-mcp/garmin_tokens.json. Do not paste credentials or tokens into chat.";
 
 export interface GarminLoginInput {
   email: string;
@@ -102,11 +104,11 @@ export async function nativeGarminLogin(
     });
     const mfaJson = await parseJson(mfaResp);
     if (responseStatusType(mfaJson) !== SSO_SUCCESSFUL) {
-      throw new Error(`Garmin MFA verification failed: ${responseStatusDetail(mfaJson)}`);
+      throw new Error(`Garmin MFA verification failed: ${responseStatusDetail(mfaJson, mfaResp)}`);
     }
     ticket = requireTicket(mfaJson);
   } else {
-    throw new Error(`Garmin login failed: ${responseStatusDetail(loginJson)}`);
+    throw new Error(`Garmin login failed: ${responseStatusDetail(loginJson, loginResp)}`);
   }
 
   // 3. Exchange ticket → OAuth1 → OAuth2 (signed with the Garmin consumer key).
@@ -316,13 +318,16 @@ async function ssoFetch(
 async function parseJson(response: Response): Promise<Record<string, unknown>> {
   const text = await response.text();
   if (!text) {
-    if (!response.ok) throw new Error(`Garmin returned HTTP ${response.status} with an empty body.`);
+    if (!response.ok) throw new Error(`Garmin returned ${httpStatus(response)} with an empty body. ${SSO_BLOCK_GUIDANCE}`);
     return {};
   }
   try {
     return JSON.parse(text) as Record<string, unknown>;
   } catch {
-    throw new Error(`Garmin returned a non-JSON response (HTTP ${response.status}). Login may be blocked — try again from a browser-like network.`);
+    const challengeHint = looksLikeCloudflareChallenge(text) || isLikelySsoBlockStatus(response.status)
+      ? ` ${SSO_BLOCK_GUIDANCE}`
+      : "";
+    throw new Error(`Garmin returned a non-JSON response (${httpStatus(response)}). Login may be blocked.${challengeHint}`);
   }
 }
 
@@ -331,11 +336,44 @@ function responseStatusType(json: Record<string, unknown>): string | undefined {
   return typeof status?.type === "string" ? status.type : undefined;
 }
 
-function responseStatusDetail(json: Record<string, unknown>): string {
+function responseStatusDetail(json: Record<string, unknown>, response?: Response): string {
   const status = json.responseStatus as Record<string, unknown> | undefined;
   const type = typeof status?.type === "string" ? status.type : "UNKNOWN";
   const message = typeof status?.message === "string" ? status.message : "";
-  return message ? `${type}: ${message}` : type;
+  const base = message ? `${type}: ${message}` : type;
+  const statusText = response && !response.ok ? httpStatus(response) : undefined;
+  const keys = Object.keys(json).filter((key) => key !== "password" && key !== "username").slice(0, 6);
+
+  if (type !== "UNKNOWN") {
+    const hint = response && isLikelySsoBlockStatus(response.status) ? ` ${SSO_BLOCK_GUIDANCE}` : "";
+    return [statusText, base].filter(Boolean).join("; ") + hint;
+  }
+
+  if (response?.status === 429) {
+    return `${httpStatus(response)}; Garmin SSO omitted responseStatus.type. ${SSO_BLOCK_GUIDANCE}`;
+  }
+
+  if (response && isLikelySsoBlockStatus(response.status)) {
+    return `${httpStatus(response)}; Garmin SSO omitted responseStatus.type. ${SSO_BLOCK_GUIDANCE}`;
+  }
+
+  const keyHint = keys.length ? ` Response keys: ${keys.join(", ")}.` : "";
+  return statusText
+    ? `${statusText}; Garmin SSO omitted responseStatus.type.${keyHint} ${SSO_BLOCK_GUIDANCE}`
+    : `Garmin SSO omitted responseStatus.type.${keyHint} ${SSO_BLOCK_GUIDANCE}`;
+}
+
+function httpStatus(response: Response): string {
+  const text = response.statusText ? ` ${response.statusText}` : "";
+  return `HTTP ${response.status}${text}`;
+}
+
+function isLikelySsoBlockStatus(status: number): boolean {
+  return status === 403 || status === 408 || status === 429 || status === 503;
+}
+
+function looksLikeCloudflareChallenge(text: string): boolean {
+  return /cloudflare|cf_clearance|cf-chl|just a moment|attention required|enable javascript/i.test(text);
 }
 
 function requireTicket(json: Record<string, unknown>): string {

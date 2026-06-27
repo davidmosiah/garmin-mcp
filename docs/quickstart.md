@@ -26,6 +26,9 @@ See the [auth quickstart walkthrough](../examples/auth-quickstart.md) for the re
 
 Prefer the legacy Python helper? Use `auth --use-python`, or `auth --install-helper` to install the `garminconnect` package (it falls back to an isolated virtualenv under `~/.garmin-mcp/venv` if Homebrew or PEP 668 blocks the install).
 
+If auth reports HTTP 429, Cloudflare, or a missing `responseStatus.type`, stop
+retrying and follow the [auth troubleshooting guide](auth.md#rate-limits-cloudflare-and-unknown-login-responses).
+
 ## 3. Check readiness
 
 ```bash

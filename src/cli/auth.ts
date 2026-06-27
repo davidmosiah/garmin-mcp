@@ -49,7 +49,8 @@ async function runNativeAuth(args: string[], json: boolean): Promise<number> {
     chmodSync(config.tokenPath, 0o600);
     return printAuthSuccess(json, config.tokenPath);
   } catch (error) {
-    return printAuthFailure(json, `Garmin login failed: ${(error as Error).message}`);
+    const message = (error as Error).message;
+    return printAuthFailure(json, message.startsWith("Garmin login failed:") ? message : `Garmin login failed: ${message}`);
   }
 }
 
