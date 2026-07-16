@@ -1,6 +1,6 @@
 {
   "name": "garmin-mcp-unofficial",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Unofficial local-first Garmin MCP server for AI health, sleep and activity agents.",
   "type": "module",
   "bin": {
@@ -30,8 +30,9 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "smoke": "node scripts/smoke-tools.mjs",
-    "test": "npm run typecheck && npm run build && npm run smoke && npm run smoke:http && npm run test:summary && npm run test:privacy-cache && npm run test:cli-ux && npm run test:native-auth && npm run test:agent-readiness && npm run test:hermes-agent && npm run test:metadata && npm run test:http-retry && npm run test:http-cache",
+    "test": "npm run typecheck && npm run build && npm run smoke && npm run smoke:http && npm run test:endpoint-contracts && npm run test:summary && npm run test:privacy-cache && npm run test:cli-ux && npm run test:native-auth && npm run test:agent-readiness && npm run test:hermes-agent && npm run test:metadata && npm run test:http-retry && npm run test:http-cache",
     "test:summary": "node scripts/summary-fixture-test.mjs",
+    "test:endpoint-contracts": "node scripts/endpoint-contract-test.mjs",
     "prepublishOnly": "npm test",
     "smoke:http": "node scripts/smoke-http.mjs",
     "test:privacy-cache": "node scripts/privacy-cache-test.mjs",

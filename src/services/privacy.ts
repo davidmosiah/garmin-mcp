@@ -58,22 +58,26 @@ function normalizeProfile(record: Record<string, unknown>, mode: PrivacyMode): u
     userProfileFullName: mode === "summary" ? undefined : record.userProfileFullName
   });
   if (mode === "summary") return base;
-  return removeSensitive({ ...record, ...base });
+  return removeSensitive({ ...base, ...record });
 }
 
 function normalizeDevice(record: Record<string, unknown>, mode: PrivacyMode): unknown {
   const devices = Array.isArray(record) ? record : [record];
-  const normalized = devices.map((device) => isObject(device) ? pickDefined({
-    deviceId: mode === "summary" ? undefined : device.deviceId,
-    unitId: mode === "summary" ? undefined : device.unitId,
-    productName: device.productName,
-    displayName: device.displayName,
-    deviceType: device.deviceType,
-    softwareVersion: device.softwareVersion,
-    batteryLevel: device.batteryLevel,
-    lastSyncTime: device.lastSyncTime,
-    primary: device.primary
-  }) : device);
+  const normalized = devices.map((device) => {
+    if (!isObject(device)) return device;
+    const base = pickDefined({
+      deviceId: mode === "summary" ? undefined : device.deviceId,
+      unitId: mode === "summary" ? undefined : device.unitId,
+      productName: device.productName,
+      displayName: device.displayName,
+      deviceType: device.deviceType,
+      softwareVersion: device.softwareVersion,
+      batteryLevel: device.batteryLevel,
+      lastSyncTime: device.lastSyncTime,
+      primary: device.primary
+    });
+    return mode === "summary" ? base : removeSensitive({ ...base, ...device });
+  });
   return Array.isArray(record) ? normalized : normalized[0];
 }
 
@@ -91,7 +95,7 @@ function normalizeDailySummary(record: Record<string, unknown>, mode: PrivacyMod
     bodyBatteryMostRecentValue: record.bodyBatteryMostRecentValue
   });
   if (mode === "summary") return base;
-  return removeSensitive({ ...record, ...base });
+  return removeSensitive({ ...base, ...record });
 }
 
 function normalizeActivity(record: Record<string, unknown>, mode: PrivacyMode): unknown {
@@ -111,7 +115,7 @@ function normalizeActivity(record: Record<string, unknown>, mode: PrivacyMode): 
     anaerobicTrainingEffect: record.anaerobicTrainingEffect
   });
   if (mode === "summary") return base;
-  const clean = removeSensitive({ ...record, ...base });
+  const clean = removeSensitive({ ...base, ...record });
   removeGpsFields(clean);
   return clean;
 }
@@ -135,7 +139,7 @@ function normalizeSleep(record: Record<string, unknown>, mode: PrivacyMode): unk
     sleepScore: sleep.sleepScore ?? sleep.overallSleepScore
   });
   if (mode === "summary") return base;
-  return removeSensitive({ ...record, dailySleepDTO: { ...sleep, ...base } });
+  return removeSensitive({ ...record, dailySleepDTO: { ...base, ...sleep } });
 }
 
 function normalizeVitals(record: Record<string, unknown>, mode: PrivacyMode): unknown {
@@ -151,7 +155,7 @@ function normalizeStress(record: Record<string, unknown>, mode: PrivacyMode): un
     restStressDuration: record.restStressDuration,
     activityStressDuration: record.activityStressDuration
   });
-  return mode === "summary" ? base : removeSensitive({ ...record, ...base });
+  return mode === "summary" ? base : removeSensitive({ ...base, ...record });
 }
 
 function normalizeBodyBattery(record: Record<string, unknown>, mode: PrivacyMode): unknown {
@@ -163,18 +167,18 @@ function normalizeBodyBattery(record: Record<string, unknown>, mode: PrivacyMode
     startTimestampLocal: record.startTimestampLocal,
     endTimestampLocal: record.endTimestampLocal
   });
-  return mode === "summary" ? base : removeSensitive({ ...record, ...base });
+  return mode === "summary" ? base : removeSensitive({ ...base, ...record });
 }
 
 function normalizeWeight(record: Record<string, unknown>, mode: PrivacyMode): unknown {
   if (Array.isArray(record.weightDTOList)) return { weightDTOList: record.weightDTOList.map((item) => isObject(item) ? normalizeWeight(item, mode) : item) };
   const base = pickDefined({ date: record.calendarDate ?? record.date, weight: record.weight, bmi: record.bmi, bodyFat: record.bodyFat });
-  return mode === "summary" ? base : removeSensitive({ ...record, ...base });
+  return mode === "summary" ? base : removeSensitive({ ...base, ...record });
 }
 
 function normalizeHydration(record: Record<string, unknown>, mode: PrivacyMode): unknown {
   const base = pickDefined({ calendarDate: record.calendarDate, valueInML: record.valueInML, goalInML: record.goalInML, sweatLossInML: record.sweatLossInML });
-  return mode === "summary" ? base : removeSensitive({ ...record, ...base });
+  return mode === "summary" ? base : removeSensitive({ ...base, ...record });
 }
 
 function summarizeUnknown(record: Record<string, unknown>): Record<string, unknown> {

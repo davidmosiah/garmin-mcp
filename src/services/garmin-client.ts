@@ -256,9 +256,14 @@ export class GarminClient {
 
 function toDate(value: string): string {
   if (value === "today") return new Date().toISOString().slice(0, 10);
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) return value.slice(0, 10);
-  return new Date(parsed).toISOString().slice(0, 10);
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:$|[Tt ])/);
+  if (!match) throw new Error(`Invalid Garmin date range value: ${value}. Use YYYY-MM-DD or an ISO 8601 date-time.`);
+  const date = match[1];
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+    throw new Error(`Invalid Garmin date range value: ${value}. Use a real calendar date.`);
+  }
+  return date;
 }
 
 function extractRecords(payload: unknown): unknown[] {

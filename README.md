@@ -111,6 +111,8 @@ See **[docs/tools.md](docs/tools.md)** for the full tool list, prompts, resource
 ## Privacy & what runs offline
 
 - `GARMIN_PRIVACY_MODE` defaults to `summary` (more conservative than other Delx Wellness connectors) because the auth model is unofficial.
+- In `structured` mode, normalized aliases are additive: complete upstream Garmin fields and nested DTOs remain available after secret/GPS redaction.
+- Activity date ranges preserve the supplied calendar date and reject invalid values before contacting Garmin Connect.
 - Garmin Connect tokens are stored at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions and are never returned by tools. **Your Garmin password is never stored** — only short-lived tokens persist locally.
 - The MCP client never sees Garmin credentials or tokens. Local cache is opt-in via `GARMIN_CACHE=sqlite`.
 - This is **not medical advice**. The server exposes user-authorized data for personal AI workflows, not diagnosis or treatment.

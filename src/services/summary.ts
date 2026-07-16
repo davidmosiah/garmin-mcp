@@ -1,4 +1,5 @@
 import type { GarminClient } from "./garmin-client.js";
+import { redactErrorMessage } from "./redaction.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -59,7 +60,7 @@ async function safeGet(client: SummaryClient, endpoint: string): Promise<unknown
   try {
     return await client.get(endpoint);
   } catch (error) {
-    return { error: (error as Error).message, endpoint };
+    return { error: logSummaryError(error), endpoint };
   }
 }
 
@@ -67,8 +68,14 @@ async function safeDisplayName(client: SummaryClient): Promise<string | { error:
   try {
     return encodeURIComponent(await client.getDisplayName());
   } catch (error) {
-    return { error: (error as Error).message };
+    return { error: logSummaryError(error) };
   }
+}
+
+function logSummaryError(error: unknown): string {
+  const message = redactErrorMessage(error instanceof Error ? error.message : String(error));
+  process.stderr.write(`[garmin-mcp] summary domain error: ${message}\n`);
+  return message;
 }
 
 async function dailyBundle(client: SummaryClient, date: string) {

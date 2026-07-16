@@ -76,4 +76,26 @@ const contextMarkdown = formatWellnessContextMarkdown(context);
 assert.ok(contextMarkdown.includes('context_type'));
 assert.ok(contextMarkdown.includes('exercise_catalog_recommend_session'));
 
+let capturedStderr = '';
+const originalStderrWrite = process.stderr.write.bind(process.stderr);
+process.stderr.write = (chunk, ...args) => {
+  capturedStderr += String(chunk);
+  return true;
+};
+try {
+  const partialClient = {
+    async getDisplayName() {
+      return 'fixture-user';
+    },
+    async get(endpoint) {
+      if (endpoint.includes('/dailySleepData/')) throw new Error('synthetic sleep contract failure');
+      return fakeClient.get(endpoint);
+    }
+  };
+  await buildDailySummary(partialClient, { days: 7, timezone: 'UTC' });
+} finally {
+  process.stderr.write = originalStderrWrite;
+}
+assert.match(capturedStderr, /\[garmin-mcp\] summary domain error: synthetic sleep contract failure/);
+
 console.log(JSON.stringify({ ok: true, daily: daily.kind, weekly: weekly.kind }, null, 2));

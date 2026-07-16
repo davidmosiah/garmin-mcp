@@ -32,6 +32,17 @@ assert.equal(summary.map, undefined);
 const raw = applyPrivacy('/activities/123', activity, 'raw');
 assert.equal(raw.map.summary_polyline, 'encoded');
 
+const structuredCollision = applyPrivacy('/activities/123', {
+  activityId: 456,
+  activityName: 'Collision fixture',
+  averageHR: null,
+  averageHeartRate: 142,
+  futureMetrics: { stamina: 73 }
+}, 'structured');
+assert.equal(structuredCollision.averageHR, null, 'structured mode must not replace an upstream field with a normalized fallback');
+assert.equal(structuredCollision.averageHeartRate, 142);
+assert.deepEqual(structuredCollision.futureMetrics, { stamina: 73 });
+
 const streams = normalizeStreams({ heartrate: { data: [120, 121] }, latlng: { data: [[1, 2]] } }, 'structured', false);
 assert.equal(streams.latlng, undefined);
 assert.deepEqual(streams.heartrate.data, [120, 121]);

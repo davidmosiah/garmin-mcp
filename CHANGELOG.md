@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.4 - 2026-07-16
+
+### Fixed
+
+- Garmin activity ranges now preserve the caller's calendar date when an ISO date-time includes an offset, and invalid dates fail before any HTTP request.
+- Structured privacy output preserves upstream fields and nested DTOs after secret/GPS redaction; normalized aliases are additive and no longer replace upstream nulls or objects.
+- Daily and weekly summaries still return useful partial data, but every underlying domain failure is now emitted to stderr with sensitive values redacted.
+
+### Tests
+
+- Add HTTP-boundary coverage for date serialization, pagination parameters, invalid-date fail-fast behavior and activity envelope extraction.
+- Add regressions for structured-field collisions, future nested fields and partial-summary observability.
+
 ## 0.5.3 - 2026-06-27
 
 ### Fixed
