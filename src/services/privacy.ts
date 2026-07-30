@@ -8,7 +8,28 @@ function pickDefined(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== null));
 }
 
-export function resolvePrivacyMode(config: GarminConfig, override?: PrivacyMode): PrivacyMode {
+export type PrivacyEscalationOpts = {
+  explicit_user_intent?: boolean;
+  include_gps?: boolean;
+};
+
+/**
+ * Resolve effective privacy mode. Agent-requested escalations (raw / include_gps)
+ * require explicit_user_intent=true so tools cannot dump GPS/PHI unredacted without consent.
+ * Config-default raw (env) is allowed without per-call intent — that is machine config, not agent override.
+ */
+export function resolvePrivacyMode(
+  config: { privacyMode: PrivacyMode },
+  override?: PrivacyMode,
+  opts?: PrivacyEscalationOpts
+): PrivacyMode {
+  const agentAskedRaw = override === "raw";
+  const agentAskedGps = opts?.include_gps === true;
+  if ((agentAskedRaw || agentAskedGps) && opts?.explicit_user_intent !== true) {
+    throw new Error(
+      "USER_ACTION_REQUIRED: privacy_mode=raw and include_gps=true require explicit_user_intent=true after the user explicitly asked for unredacted or GPS data."
+    );
+  }
   return override ?? config.privacyMode;
 }
 

@@ -87,7 +87,7 @@ function registerCollectionTool(server: McpServer, name: string, title: string, 
     async (params) => {
       try {
         const config = getConfig();
-        const privacyMode = resolvePrivacyMode(config, params.privacy_mode);
+        const privacyMode = resolvePrivacyMode(config, params.privacy_mode, { explicit_user_intent: (params as { explicit_user_intent?: boolean }).explicit_user_intent, include_gps: (params as { include_gps?: boolean }).include_gps });
         const garmin = new GarminClient(config);
         const result = await garmin.listActivities(params);
         const endpoint = "/activitylist-service/activities/search/activities";
@@ -123,7 +123,7 @@ function registerDateTool(server: McpServer, name: string, title: string, endpoi
       try {
         const config = getConfig();
         const garmin = new GarminClient(config);
-        const privacyMode = resolvePrivacyMode(config, params.privacy_mode);
+        const privacyMode = resolvePrivacyMode(config, params.privacy_mode, { explicit_user_intent: (params as { explicit_user_intent?: boolean }).explicit_user_intent, include_gps: (params as { include_gps?: boolean }).include_gps });
         const date = dateValue(params.date);
         const endpoint = await endpointBuilder(garmin, date);
         const data = applyPrivacy(endpoint, await garmin.get(endpoint), privacyMode);
@@ -149,7 +149,7 @@ function registerGetByIdTool(server: McpServer, name: string, title: string, end
       try {
         const config = getConfig();
         const garmin = new GarminClient(config);
-        const privacyMode = resolvePrivacyMode(config, params.privacy_mode);
+        const privacyMode = resolvePrivacyMode(config, params.privacy_mode, { explicit_user_intent: (params as { explicit_user_intent?: boolean }).explicit_user_intent, include_gps: (params as { include_gps?: boolean }).include_gps });
         const endpoint = endpointBuilder(params.id);
         const data = applyPrivacy(endpoint, await garmin.get(endpoint), privacyMode);
         return makeResponse({ endpoint, privacy_mode: privacyMode, data }, params.response_format, bulletList(title, { endpoint, data: JSON.stringify(data) }));
@@ -170,10 +170,10 @@ function registerSimpleEndpointTool(server: McpServer, name: string, title: stri
       outputSchema: EndpointDataOutputSchema.shape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
     },
-    async ({ response_format, privacy_mode }) => {
+    async ({ response_format, privacy_mode, explicit_user_intent }) => {
       try {
         const config = getConfig();
-        const privacyMode = resolvePrivacyMode(config, privacy_mode);
+        const privacyMode = resolvePrivacyMode(config, privacy_mode, { explicit_user_intent });
         const data = applyPrivacy(endpoint, await new GarminClient(config).get(endpoint), privacyMode);
         return makeResponse({ endpoint, privacy_mode: privacyMode, data }, response_format, bulletList(title, { endpoint, data: JSON.stringify(data) }));
       } catch (error) {
@@ -541,7 +541,7 @@ export function registerGarminTools(server: McpServer): void {
   }, async (params) => {
     try {
       const config = getConfig();
-      const privacyMode = resolvePrivacyMode(config, params.privacy_mode);
+      const privacyMode = resolvePrivacyMode(config, params.privacy_mode, { explicit_user_intent: (params as { explicit_user_intent?: boolean }).explicit_user_intent, include_gps: (params as { include_gps?: boolean }).include_gps });
       const start = dateValue(params.start_date);
       const end = dateValue(params.end_date);
       const endpoint = `/weight-service/weight/dateRange?startDate=${start}&endDate=${end}`;
