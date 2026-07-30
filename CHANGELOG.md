@@ -1,3 +1,9 @@
+## 0.5.5 - 2026-07-30
+
+### Fixed
+
+- `listActivities` `next_page` no longer returns the current page after a full single-page fetch (agents looped forever). Matches startPage + pages_fetched (same class as strava/fitbit).
+
 # Changelog
 
 ## 0.5.4 - 2026-07-16

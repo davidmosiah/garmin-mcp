@@ -58,7 +58,15 @@ export class GarminClient {
       start += limit;
     }
 
-    return { records, next_page: records.length && records.length % limit === 0 ? Math.floor(start / limit) + 1 : undefined, pages_fetched: pages };
+    // Full last page ⇒ more data may exist. next_page is startPage + pages_fetched
+    // (not Math.floor(start/limit)+1, which stays on the current page when only one
+    // page was fetched because `start` is not advanced unless all_pages loops).
+    const startPage = Math.max(params.page ?? 1, 1);
+    return {
+      records,
+      next_page: records.length && records.length % limit === 0 ? startPage + pages : undefined,
+      pages_fetched: pages
+    };
   }
 
   async getDisplayName(): Promise<string> {
