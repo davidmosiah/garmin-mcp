@@ -193,16 +193,76 @@ function summarizeUnknown(record: Record<string, unknown>): Record<string, unkno
   });
 }
 
-function removeSensitive(record: Record<string, unknown>): Record<string, unknown> {
-  const clone = { ...record };
-  for (const key of [
-    "email", "emailAddress", "fullName", "firstName", "lastName", "avatar", "profileImageUrlLarge", "profileImageUrlMedium", "profileImageUrlSmall",
-    "access_token", "refresh_token", "di_token", "di_refresh_token", "jwt_web", "csrf_token", "password", "location", "address",
-    "startLatitude", "startLongitude", "start_latlng", "endLatitude", "endLongitude", "end_latlng", "latitude", "longitude", "lat", "lon", "lng", "latlng", "gps", "geoPolylineDTO", "map", "polyline", "summary_polyline"
-  ]) delete clone[key];
+/** Top-level and nested secret-ish keys (identity + OAuth session). */
+function isSensitiveKey(key: string): boolean {
+  return [
+    "email",
+    "emailAddress",
+    "fullName",
+    "firstName",
+    "lastName",
+    "avatar",
+    "profileImageUrlLarge",
+    "profileImageUrlMedium",
+    "profileImageUrlSmall",
+    "access_token",
+    "refresh_token",
+    "di_token",
+    "di_refresh_token",
+    "jwt_web",
+    "csrf_token",
+    "password",
+    "location",
+    "address"
+  ].includes(key);
+}
+
+/** GPS / route geometry keys — stripped at every nesting level (Polar/Strava parity). */
+function isGpsKey(key: string): boolean {
+  return [
+    "startLatitude",
+    "startLongitude",
+    "start_latlng",
+    "endLatitude",
+    "endLongitude",
+    "end_latlng",
+    "latitude",
+    "longitude",
+    "lat",
+    "lon",
+    "lng",
+    "latlng",
+    "coordinates",
+    "coordinate",
+    "gps",
+    "gpx",
+    "geoPolylineDTO",
+    "map",
+    "polyline",
+    "summary_polyline"
+  ].includes(key);
+  // Note: do not drop whole "points"/"routePoints" arrays — recurse into them so
+  // elevation/time samples can remain while lat/lon fields are stripped.
+}
+
+function deepRedact(value: unknown, dropKey: (key: string) => boolean): unknown {
+  if (Array.isArray(value)) return value.map((item) => deepRedact(item, dropKey));
+  if (!isObject(value)) return value;
+  const clone: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (dropKey(key)) continue;
+    clone[key] = deepRedact(child, dropKey);
+  }
   return clone;
 }
 
+function removeSensitive(record: Record<string, unknown>): Record<string, unknown> {
+  return deepRedact(record, (key) => isSensitiveKey(key) || isGpsKey(key)) as Record<string, unknown>;
+}
+
+/** In-place recursive GPS strip (used when includeGps=false after base redaction). */
 function removeGpsFields(record: Record<string, unknown>): void {
-  for (const key of ["startLatitude", "startLongitude", "start_latlng", "endLatitude", "endLongitude", "end_latlng", "latitude", "longitude", "lat", "lon", "lng", "latlng", "gps", "geoPolylineDTO", "map", "polyline", "summary_polyline"]) delete record[key];
+  const cleaned = deepRedact(record, isGpsKey) as Record<string, unknown>;
+  for (const key of Object.keys(record)) delete record[key];
+  Object.assign(record, cleaned);
 }

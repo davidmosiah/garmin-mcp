@@ -1,6 +1,6 @@
 {
   "name": "garmin-mcp-unofficial",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "Unofficial local-first Garmin MCP server for AI health, sleep and activity agents.",
   "type": "module",
   "bin": {

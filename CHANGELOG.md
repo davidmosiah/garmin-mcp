@@ -1,6 +1,13 @@
 ## 0.5.5 - 2026-07-30
 
 
+
+## 0.5.7 - 2026-07-30
+
+### Security
+
+- Recursive GPS/PII redaction in privacy layer (nested lat/lon/polyline/map dropped; Polar/Strava parity).
+
 ## 0.5.6 - 2026-07-30
 
 ### Security
