@@ -35,6 +35,19 @@ Profile, devices, daily movement, sleep, heart rate, HRV, stress, Body Battery, 
 
 No unrestricted raw accelerometer/gyroscope telemetry. It reads processed Garmin Connect data and supported activity detail payloads.
 
+## How do you keep agent context under control for time-series?
+
+Token budget is a product of tool design, not a request that the model “remember” to stay small.
+
+1. **Summaries first** — `garmin_daily_summary`, `garmin_weekly_summary`, and `garmin_wellness_context` return scorecards and readiness context, not dense sample streams.
+2. **Civil-day and range tools** — wellness endpoints take one `date` (or an explicit weight range). Collections use `limit` (default 20, max 100), optional `after`/`before`, and multi-page fetch only when `all_pages` is set (`max_pages` capped at 10).
+3. **Privacy modes shape payload size** — `summary` minimizes fields; `structured` is the usual agent path with secrets/GPS stripped; `raw` is opt-in upstream Garmin Connect JSON only.
+4. **Escalate activities carefully** — list → activity summary → splits / HR zones → `garmin_get_activity_details` only when samples are needed. Detail payloads can still be large in structured/raw mode; prefer `privacy_mode=summary` for coaching questions.
+5. **Markdown previews truncate** — collection markdown shows a short preview and notes remaining rows; structured content remains the fuller channel.
+6. **Synthetic demo** — `garmin_demo` returns contract-shaped samples with `is_demo: true` and never calls Garmin Connect.
+
+There is no unrestricted per-second telemetry dump. Dense activity series remain an intentional deep-dive path, not the default agent flow. Design discussion with other local-first health MCPs: [issue #19](https://github.com/davidmosiah/garmin-mcp/issues/19).
+
 ## Can Garmin break this?
 
 Yes. Personal Garmin Connect mode is unofficial and can break if Garmin changes private auth or endpoints. Open an issue with sanitized error output if that happens.
