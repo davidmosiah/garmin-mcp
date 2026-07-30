@@ -1,5 +1,12 @@
 ## 0.5.5 - 2026-07-30
 
+
+## 0.5.6 - 2026-07-30
+
+### Security
+
+- Security: require explicit_user_intent on revoke/disconnect tools so agents cannot wipe OAuth grants autonomously.
+
 ### Fixed
 
 - `listActivities` `next_page` no longer returns the current page after a full single-page fetch (agents looped forever). Matches startPage + pages_fetched (same class as strava/fitbit).

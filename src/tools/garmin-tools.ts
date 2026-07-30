@@ -608,12 +608,24 @@ export function registerGarminTools(server: McpServer): void {
 
   server.registerTool("garmin_disconnect_local", {
     title: "Disconnect Garmin Locally",
-    description: "Delete the local Garmin token file. This does not change the Garmin account; use only when the user explicitly wants to disconnect this MCP.",
-    inputSchema: ResponseOnlyInputSchema.shape,
+    description: "Delete the local Garmin token file. This does not change the Garmin account; use only when the user explicitly wants to disconnect this MCP. Gated by explicit_user_intent: true (requires explicit user intent).",
+    inputSchema: {
+      explicit_user_intent: z
+        .boolean()
+        .optional()
+        .describe("Must be true after the user explicitly asked to disconnect. Prevents agents from revoking autonomously."),
+      response_format: z.enum(["markdown", "json"]).default("markdown")
+    },
     outputSchema: RevokeAccessOutputSchema.shape,
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
-  }, async ({ response_format }) => {
+  }, async ({ explicit_user_intent, response_format }) => {
     try {
+      if (explicit_user_intent !== true) {
+        return makeError(
+          "USER_ACTION_REQUIRED: explicit_user_intent must be true to disconnect and clear local tokens. Ask the user to confirm disconnect first."
+        );
+      }
+
       const result = await client().clearLocalTokens();
       const output = { ...result, note: "Local Garmin MCP tokens were deleted. Run garmin-mcp-server auth before future API calls." };
       return makeResponse(output, response_format, bulletList("Garmin Local Tokens Deleted", output));

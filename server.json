@@ -6,12 +6,12 @@
     "url": "https://github.com/davidmosiah/garmin-mcp",
     "source": "github"
   },
-  "version": "0.5.5",
+  "version": "0.5.6",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "garmin-mcp-unofficial",
-      "version": "0.5.5",
+      "version": "0.5.6",
       "transport": {
         "type": "stdio"
       },
