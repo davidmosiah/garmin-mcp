@@ -11,7 +11,7 @@ export const HERMES_DIRECT_TOOLS = [
 ];
 
 const STANDARD_TOOLS = [
-  "garmin_agent_manifest", "garmin_auth_instructions", "garmin_cache_status",
+  "garmin_activity_series", "garmin_agent_manifest", "garmin_auth_instructions", "garmin_cache_status",
   "garmin_capabilities", "garmin_connection_status", "garmin_daily_summary",
   "garmin_data_inventory", "garmin_demo", "garmin_disconnect_local", "garmin_get_activity",
   "garmin_get_activity_details", "garmin_get_activity_hr_zones", "garmin_get_activity_splits",

@@ -1,3 +1,26 @@
+## 0.6.0 - 2026-08-01
+
+### Added
+
+- `garmin_activity_series` — bounded, self-describing time-series for one activity metric.
+  Exact stats (avg/min/max/p25/p50/p75, time-in-zone) are always computed on full-resolution
+  samples; the returned series is downsampled into fixed time buckets under a 500-point server
+  cap. Payload declares `downsampled`, `source_points`, `returned_points`, `method` and a
+  `data_quality` block so agents never invent precision they do not have. On the synthetic
+  3-hour 1 Hz fixture: 10,800 samples (379 KB) -> 180 points (11.3 KB), a 97% reduction.
+- `scripts/synthetic-series-fixture.mjs` — deterministic synthetic 3-hour ride in Garmin
+  `details` format (10,800 1 Hz HR points, closed-form profile, zero real health data), with
+  independently computed ground truth. Counterpart to the Kindred / Mi Fitness Data Bridge
+  fixture so both downsamplers can be regression-tested against the same effort.
+- 22 regression checks in `scripts/activity-series-test.mjs`, wired into `npm test`.
+
+### Notes
+
+- Response shape is deliberately aligned with the Mi Fitness Data Bridge `workout_series`
+  contract (issue #19) so a single agent can consume both servers without special-casing.
+- GPS is never served by the series tool, whatever the caller requests; positional streams
+  stay behind the existing `privacy_mode` / `include_gps` escalation.
+
 ## 0.5.5 - 2026-07-30
 
 

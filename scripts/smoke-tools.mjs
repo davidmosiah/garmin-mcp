@@ -8,7 +8,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 const expectedTools = [
   'garmin_agent_manifest', 'garmin_auth_instructions', 'garmin_cache_status', 'garmin_capabilities',
   'garmin_connection_status', 'garmin_daily_summary', 'garmin_data_inventory', 'garmin_demo',
-  'garmin_disconnect_local', 'garmin_get_activity', 'garmin_get_activity_details', 'garmin_get_activity_hr_zones',
+  'garmin_activity_series', 'garmin_disconnect_local', 'garmin_get_activity', 'garmin_get_activity_details', 'garmin_get_activity_hr_zones',
   'garmin_get_activity_splits', 'garmin_get_activity_weather', 'garmin_get_body_battery_day',
   'garmin_get_body_battery_events', 'garmin_get_daily_summary', 'garmin_get_heart_day', 'garmin_get_hrv_day',
   'garmin_get_hydration_day', 'garmin_get_intensity_minutes_day', 'garmin_get_primary_training_device',

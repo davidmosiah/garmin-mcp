@@ -33,7 +33,7 @@ export function buildCapabilities() {
       { name: "Daily movement", examples: ["steps", "calories", "distance", "intensity minutes", "floors"], tools: ["garmin_get_daily_summary", "garmin_get_steps_day", "garmin_get_intensity_minutes_day"] },
       { name: "Sleep and recovery", examples: ["sleep duration", "sleep stages", "HRV", "body battery", "stress", "training readiness"], tools: ["garmin_get_sleep_day", "garmin_get_hrv_day", "garmin_get_body_battery_day", "garmin_get_stress_day", "garmin_get_training_readiness_day"] },
       { name: "Heart and physiology", examples: ["daily heart-rate samples", "resting HR", "respiration", "SpO2"], tools: ["garmin_get_heart_day", "garmin_get_respiration_day", "garmin_get_spo2_day"] },
-      { name: "Activities", examples: ["recent workouts", "activity detail", "splits", "weather", "heart-rate zones"], tools: ["garmin_list_activities", "garmin_get_activity", "garmin_get_activity_details", "garmin_get_activity_splits", "garmin_get_activity_weather", "garmin_get_activity_hr_zones"] },
+      { name: "Activities", examples: ["recent workouts", "activity detail", "bounded time-series", "splits", "weather", "heart-rate zones"], tools: ["garmin_list_activities", "garmin_get_activity", "garmin_activity_series", "garmin_get_activity_details", "garmin_get_activity_splits", "garmin_get_activity_weather", "garmin_get_activity_hr_zones"] },
       { name: "Body logs", examples: ["weight range", "hydration day"], tools: ["garmin_get_weight_range", "garmin_get_hydration_day"] },
       { name: "Agent summaries", examples: ["daily diagnostic", "weekly trend review", "action candidates", "normalized wellness_context"], tools: ["garmin_daily_summary", "garmin_weekly_summary", "garmin_wellness_context"] }
     ],

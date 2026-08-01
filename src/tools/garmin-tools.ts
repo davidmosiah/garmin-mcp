@@ -1,6 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  ActivitySeriesInputSchema,
+  ActivitySeriesOutputSchema,
   AgentManifestInputSchema,
   AgentManifestOutputSchema,
   AuthInstructionsInputSchema,
@@ -35,6 +37,7 @@ import { bulletList, formatCollection, makeError, makeResponse } from "../servic
 import { applyPrivacy, resolvePrivacyMode } from "../services/privacy.js";
 import { buildDailySummary, buildWeeklySummary, formatSummaryMarkdown } from "../services/summary.js";
 import { buildWellnessContext, formatWellnessContextMarkdown } from "../services/context.js";
+import { SERIES_HARD_MAX_POINTS, buildActivitySeries, type GarminDetailsPayload } from "../services/series.js";
 import {
   buildProfileSummary,
   getOnboardingFlow,
@@ -555,6 +558,52 @@ export function registerGarminTools(server: McpServer): void {
   registerCollectionTool(server, "garmin_list_activities", "Garmin Activities", "List recent Garmin activities. Supports pagination, optional date filters and privacy modes.");
   registerGetByIdTool(server, "garmin_get_activity", "Garmin Activity", (id) => `/activity-service/activity/${id}`, "Get a Garmin activity summary by activity id.");
   registerGetByIdTool(server, "garmin_get_activity_details", "Garmin Activity Details", (id) => `/activity-service/activity/${id}/details`, "Get detailed Garmin activity samples when available.");
+  server.registerTool("garmin_activity_series", {
+    title: "Garmin Activity Series",
+    description:
+      "Bounded time-series for one activity metric. Returns exact stats computed on full-resolution samples plus a downsampled series capped at " +
+      `${SERIES_HARD_MAX_POINTS} points, so a 3-hour ride at 1 Hz never blows the context window. ` +
+      "Prefer garmin_get_activity / splits / hr_zones first; reach for this when you actually need the shape of the effort over time. " +
+      "GPS is never returned here.",
+    inputSchema: ActivitySeriesInputSchema.shape,
+    outputSchema: ActivitySeriesOutputSchema.shape,
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+  }, async ({ id, metric, resolution_seconds, max_points, reference_max_hr, response_format }) => {
+    try {
+      const garmin = new GarminClient(getConfig());
+      const endpoint = `/activity-service/activity/${id}/details`;
+      // Deliberately unfiltered by privacy mode: summary mode strips the very sample
+      // arrays this tool exists to compress, and the shaping below never emits GPS.
+      const payload = await garmin.get(endpoint) as GarminDetailsPayload;
+      const series = buildActivitySeries(payload, {
+        activityId: id,
+        metric,
+        resolutionSeconds: resolution_seconds,
+        maxPoints: max_points,
+        referenceMaxHr: reference_max_hr
+      });
+      const zones = series.time_in_zone
+        ? series.time_in_zone.zones.map((zone) => `Z${zone.zone} ${zone.percent}%`).join(", ")
+        : undefined;
+      return makeResponse(series, response_format, bulletList("Garmin Activity Series", {
+        activity_id: series.activity_id,
+        metric: `${series.metric} (${series.unit})`,
+        avg: series.stats.avg,
+        min_max: `${series.stats.min}–${series.stats.max}`,
+        percentiles: `p25 ${series.stats.p25} | p50 ${series.stats.p50} | p75 ${series.stats.p75}`,
+        time_in_zone: zones,
+        resolution_seconds: series.resolution_seconds,
+        points: `${series.returned_points} returned from ${series.source_points} samples`,
+        downsampled: `${series.downsampled} (${series.method})`,
+        coverage_ratio: series.data_quality.coverage_ratio,
+        longest_gap_seconds: series.data_quality.longest_gap_seconds,
+        notes: series.notes.length > 0 ? series.notes.join(" | ") : undefined
+      }));
+    } catch (error) {
+      return makeError((error as Error).message);
+    }
+  });
+
   registerGetByIdTool(server, "garmin_get_activity_splits", "Garmin Activity Splits", (id) => `/activity-service/activity/${id}/splits`, "Get Garmin activity splits/laps by activity id.");
   registerGetByIdTool(server, "garmin_get_activity_weather", "Garmin Activity Weather", (id) => `/activity-service/activity/${id}/weather`, "Get Garmin activity weather by activity id when available.");
   registerGetByIdTool(server, "garmin_get_activity_hr_zones", "Garmin Activity Heart-Rate Zones", (id) => `/activity-service/activity/${id}/hrTimeInZones`, "Get Garmin activity heart-rate zone time by activity id when available.");
