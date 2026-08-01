@@ -31,6 +31,7 @@ import { buildPrivacyAudit } from "../services/audit.js";
 import { buildAgentManifest, formatAgentManifestMarkdown } from "../services/agent-manifest.js";
 import { buildCapabilities } from "../services/capabilities.js";
 import { buildDataInventory, formatInventoryMarkdown } from "../services/inventory.js";
+import { buildDemoPayload } from "../services/demo.js";
 import { buildConnectionStatus } from "../services/connection-status.js";
 import { getConfig } from "../services/config.js";
 import { bulletList, formatCollection, makeError, makeResponse } from "../services/format.js";
@@ -292,50 +293,14 @@ export function registerGarminTools(server: McpServer): void {
     inputSchema: ResponseOnlyInputSchema.shape,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }, async ({ response_format }) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const payload = {
-      ok: true,
-      is_demo: true,
-      sample: {
-        garmin_daily_summary: {
-          date: today,
-          steps: 8420,
-          floors_climbed: 12,
-          active_calories: 540,
-          resting_heart_rate: 56,
-          stress_avg: 28,
-          body_battery_high: 84,
-          body_battery_low: 23,
-          sleep_score: 79,
-          sleep_duration_min: 432,
-        },
-        garmin_wellness_context: {
-          window: "last_24h",
-          body_battery_now: 41,
-          training_readiness: "moderate",
-          stress_avg: 28,
-          sleep_score: 79,
-          recommendation: "Body Battery moderate, training readiness moderate. Tackle a Z2 endurance session today; save threshold work for tomorrow when battery should rebuild.",
-        },
-        garmin_get_body_battery_day: {
-          date: today,
-          high: 84,
-          low: 23,
-          end_of_day: 41,
-          discharge_events: 3,
-          recharge_events: 2,
-        },
-      },
-      notes: [
-        "All sample data is synthetic; tagged with is_demo=true.",
-        "Real calls return live data from Garmin Connect after local auth.",
-      ],
-    };
+    const payload = buildDemoPayload();
+    const context = payload.sample.garmin_wellness_context;
     return makeResponse(payload, response_format, bulletList("Garmin Demo", {
       is_demo: true,
-      body_battery_now: 41,
-      training_readiness: "moderate",
-      recommendation: payload.sample.garmin_wellness_context.recommendation,
+      readiness_score: context.readiness_score,
+      body_battery: context.body_battery,
+      recent_training_load: context.recent_training_load,
+      recommended_handoff: context.recommended_handoff.tool,
     }));
   });
 

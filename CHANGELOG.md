@@ -1,3 +1,40 @@
+## 0.7.0 - 2026-08-01
+
+### Fixed
+
+- **`garmin_demo` was teaching agents a contract that does not exist.** The tool's whole
+  purpose is to let an agent see the payload shape before spending a real Garmin Connect
+  call — but nobody had ever compared the examples to the builders, and all three had
+  drifted. Of the 21 fields the demo advertised, **0 were returned by the server**; the
+  examples omitted 94 key paths that are. Concretely, an agent that trusted the demo:
+  - parsed `garmin_daily_summary` as a flat object and never found `scorecard`,
+    `window`, `data_quality`, `diagnostic` or `safety` — the entire real envelope, plus
+    every HRV, training-readiness, training-status, respiration and SpO2 field;
+  - branched on `garmin_wellness_context.training_readiness === "moderate"`, a **string**
+    field that does not exist; the server returns `readiness_score: 72`, a **number**
+    under a different name. Same class of error for `body_battery_now` (real:
+    `body_battery`) and `recommendation` (real: the structured
+    `recommended_handoff.{tool,reason}`, which is the point of the
+    `delx-wellness-context/v1` contract and was invisible in the demo);
+  - expected `garmin_get_body_battery_day` to return `{ high, low, end_of_day,
+    discharge_events, recharge_events }`. Not one of those six exists. Raw date tools
+    return `{ endpoint, privacy_mode, data }` with the Garmin payload
+    (`charged`, `drained`, `bodyBatteryValuesArray`, …) inside `data` — so the demo also
+    hid the fact that the payload shape depends on `privacy_mode`.
+
+  The examples now match the real output field for field. Demo values remain synthetic.
+
+### Added
+
+- `scripts/demo-contract-test.mjs`, wired into `npm test` — runs the real
+  `buildDailySummary`, `buildWellnessContext` and `applyPrivacy` over a stub Garmin client,
+  extracts recursive key paths, and fails in **both** directions: a key the demo invents,
+  and a contract key the demo omits. 95 key paths verified. This is what makes the drift
+  above impossible to reintroduce silently; a builder shape change now fails the build and
+  points at `src/services/demo.ts`.
+- `src/services/demo.ts` — the demo payload moved out of the tool handler so the gate can
+  import it without standing up an MCP server.
+
 ## 0.6.0 - 2026-08-01
 
 ### Added
