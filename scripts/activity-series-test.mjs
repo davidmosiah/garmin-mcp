@@ -125,19 +125,30 @@ check('time_in_zone uses full-resolution samples and declares its reference', ()
   assert.equal(series.time_in_zone.zone_model, 'percent_of_reference_max_hr');
   assert.equal(series.time_in_zone.reference_source, 'observed_max');
   assert.equal(series.time_in_zone.reference_max_hr, truth.max);
+  assert.equal(series.t_unit, 'seconds_from_start');
   const total = series.time_in_zone.zones.reduce((acc, zone) => acc + zone.percent, 0);
   assert.ok(Math.abs(total - 100) < 0.5, `zone percents sum to ${total}`);
   assert.ok(series.notes.some((note) => note.includes('reference_max_hr')));
 });
 
-check('a caller-supplied max HR is labelled as such', () => {
+check('a caller-supplied max HR is labelled caller_provided', () => {
   const series = buildActivitySeries(ride, {
     activityId: RIDE_ACTIVITY_ID,
     metric: 'heart_rate',
     referenceMaxHr: 190
   });
-  assert.equal(series.time_in_zone.reference_source, 'caller');
+  assert.equal(series.time_in_zone.reference_source, 'caller_provided');
   assert.equal(series.time_in_zone.reference_max_hr, 190);
+});
+
+check('activity-row max HR is labelled activity_recorded_max over observed', () => {
+  const series = buildActivitySeries(ride, {
+    activityId: RIDE_ACTIVITY_ID,
+    metric: 'heart_rate',
+    activityRecordedMaxHr: 185
+  });
+  assert.equal(series.time_in_zone.reference_source, 'activity_recorded_max');
+  assert.equal(series.time_in_zone.reference_max_hr, 185);
 });
 
 check('data_quality reports real gaps instead of hiding them', () => {
@@ -147,6 +158,7 @@ check('data_quality reports real gaps instead of hiding them', () => {
   assert.ok(series.data_quality.longest_gap_seconds >= 600, `gap ${series.data_quality.longest_gap_seconds}`);
   assert.ok(series.data_quality.coverage_ratio < 1);
   assert.equal(series.data_quality.sample_interval_seconds, 1);
+  assert.equal(series.data_quality.coverage_anchor, 'sample_span');
 });
 
 check('sparse coverage raises an explicit note', () => {
@@ -156,16 +168,35 @@ check('sparse coverage raises an explicit note', () => {
   assert.ok(series.notes.some((note) => note.includes('Sparse series')));
 });
 
-check('documented limit: a gap at the head reads as a shorter activity', () => {
-  // coverage_ratio is derived from first-to-last sample span, so it can only see
-  // interior holes. Without a nominal activity duration from Garmin there is no
-  // way to know the first 4000s were dropped rather than never recorded — and
-  // inventing an assumption here would produce a confidently wrong quality score.
+check('without nominal duration, a head gap still reads as a shorter activity', () => {
+  // sample_span fallback: first-to-last only sees interior holes. Without a
+  // duration there is no honest way to know the first 4000s were dropped.
   const headless = buildSyntheticRide({ gaps: [[0, 4000]] });
   const series = buildActivitySeries(headless, { activityId: RIDE_ACTIVITY_ID, metric: 'heart_rate' });
+  assert.equal(series.data_quality.coverage_anchor, 'sample_span');
   assert.equal(series.data_quality.coverage_ratio, 1);
   assert.equal(series.data_quality.longest_gap_seconds, 1);
   assert.ok(!series.notes.some((note) => note.includes('Sparse series')));
+});
+
+check('duration-anchored coverage surfaces a head gap (Kindred pattern)', () => {
+  // Same 3h ride with first 20 min missing — with nominal duration the agent
+  // sees coverage_ratio ≈ 0.889 instead of "shorter, fully-sampled".
+  const headless = buildSyntheticRide({ gaps: [[0, 1200]] });
+  const series = buildActivitySeries(headless, {
+    activityId: RIDE_ACTIVITY_ID,
+    metric: 'heart_rate',
+    nominalDurationSeconds: 10800,
+    startTime: '2026-07-15T06:00:00Z'
+  });
+  assert.equal(series.data_quality.coverage_anchor, 'nominal_duration');
+  assert.equal(series.start_time, '2026-07-15T06:00:00Z');
+  assert.ok(
+    series.data_quality.coverage_ratio > 0.85 && series.data_quality.coverage_ratio < 0.92,
+    `coverage ${series.data_quality.coverage_ratio}`
+  );
+  assert.ok(series.data_quality.longest_gap_seconds >= 1200);
+  assert.ok(series.notes.some((note) => note.includes('Sparse series')));
 });
 
 check('GPS columns are never served, even when present upstream', () => {

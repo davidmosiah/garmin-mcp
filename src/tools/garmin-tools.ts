@@ -38,7 +38,14 @@ import { bulletList, formatCollection, makeError, makeResponse } from "../servic
 import { applyPrivacy, resolvePrivacyMode } from "../services/privacy.js";
 import { buildDailySummary, buildWeeklySummary, formatSummaryMarkdown } from "../services/summary.js";
 import { buildWellnessContext, formatWellnessContextMarkdown } from "../services/context.js";
-import { SERIES_HARD_MAX_POINTS, buildActivitySeries, type GarminDetailsPayload } from "../services/series.js";
+import {
+  SERIES_HARD_MAX_POINTS,
+  buildActivitySeries,
+  pickActivityDurationSeconds,
+  pickActivityMaxHr,
+  pickActivityStartTime,
+  type GarminDetailsPayload
+} from "../services/series.js";
 import {
   buildProfileSummary,
   getOnboardingFlow,
@@ -536,16 +543,25 @@ export function registerGarminTools(server: McpServer): void {
   }, async ({ id, metric, resolution_seconds, max_points, reference_max_hr, response_format }) => {
     try {
       const garmin = new GarminClient(getConfig());
-      const endpoint = `/activity-service/activity/${id}/details`;
-      // Deliberately unfiltered by privacy mode: summary mode strips the very sample
-      // arrays this tool exists to compress, and the shaping below never emits GPS.
-      const payload = await garmin.get(endpoint) as GarminDetailsPayload;
+      const detailsEndpoint = `/activity-service/activity/${id}/details`;
+      const summaryEndpoint = `/activity-service/activity/${id}`;
+      // Details intentionally unfiltered by privacy mode: summary mode strips the
+      // sample arrays this tool exists to compress, and the shaping never emits GPS.
+      // Summary is only used for nominal duration / recorded max HR / start clock —
+      // the duration-anchored coverage + reference_source fields of agent-safe-series/v1.
+      const [payload, summary] = await Promise.all([
+        garmin.get(detailsEndpoint) as Promise<GarminDetailsPayload>,
+        garmin.get(summaryEndpoint).catch(() => null) as Promise<Record<string, unknown> | null>
+      ]);
       const series = buildActivitySeries(payload, {
         activityId: id,
         metric,
         resolutionSeconds: resolution_seconds,
         maxPoints: max_points,
-        referenceMaxHr: reference_max_hr
+        referenceMaxHr: reference_max_hr,
+        nominalDurationSeconds: pickActivityDurationSeconds(summary),
+        activityRecordedMaxHr: pickActivityMaxHr(summary),
+        startTime: pickActivityStartTime(summary)
       });
       const zones = series.time_in_zone
         ? series.time_in_zone.zones.map((zone) => `Z${zone.zone} ${zone.percent}%`).join(", ")
@@ -557,10 +573,12 @@ export function registerGarminTools(server: McpServer): void {
         min_max: `${series.stats.min}–${series.stats.max}`,
         percentiles: `p25 ${series.stats.p25} | p50 ${series.stats.p50} | p75 ${series.stats.p75}`,
         time_in_zone: zones,
+        reference_source: series.time_in_zone?.reference_source,
         resolution_seconds: series.resolution_seconds,
         points: `${series.returned_points} returned from ${series.source_points} samples`,
         downsampled: `${series.downsampled} (${series.method})`,
         coverage_ratio: series.data_quality.coverage_ratio,
+        coverage_anchor: series.data_quality.coverage_anchor,
         longest_gap_seconds: series.data_quality.longest_gap_seconds,
         notes: series.notes.length > 0 ? series.notes.join(" | ") : undefined
       }));

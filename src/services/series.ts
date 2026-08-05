@@ -95,11 +95,23 @@ export type ZoneBucket = {
   percent: number;
 }
 
+/**
+ * Shared with Mi Fitness Data Bridge `agent-safe-series/v1`
+ * (https://github.com/shkyyy18/mi-fitness-data-bridge@1647472).
+ * Prefer the same strings on both servers so one agent can branch once.
+ */
+export type ReferenceSource =
+  | "caller_provided"
+  | "activity_recorded_max"
+  | "observed_max";
+
+export type CoverageAnchor = "nominal_duration" | "sample_span";
+
 export type TimeInZone = {
   zone_model: "percent_of_reference_max_hr";
   reference_max_hr: number;
   /** Where reference_max_hr came from — never silently assumed. */
-  reference_source: "caller" | "observed_max";
+  reference_source: ReferenceSource;
   zones: ZoneBucket[];
 }
 
@@ -110,6 +122,13 @@ export type DataQuality = {
   longest_gap_seconds: number;
   /** Median delta between consecutive samples; the basis for expected_samples. */
   sample_interval_seconds: number;
+  /**
+   * How expected_samples was derived. `nominal_duration` (from the activity
+   * row) is the honest one: head/tail sensor drops surface as coverage < 1.
+   * `sample_span` only sees interior holes — the documented fallback when no
+   * duration is available. Pattern from Kindred / Mi Fitness Data Bridge.
+   */
+  coverage_anchor: CoverageAnchor;
 }
 
 export type ActivitySeries = {
@@ -117,6 +136,9 @@ export type ActivitySeries = {
   activity_id: string | number;
   metric: SeriesMetric;
   unit: string;
+  /** Absolute clock for the first sample when known; points[].t is relative to this. */
+  start_time?: string;
+  t_unit: "seconds_from_start";
   resolution_seconds: number;
   requested_resolution_seconds: number;
   points: SeriesPoint[];
@@ -224,16 +246,30 @@ function medianInterval(samples: RawSample[]): number {
 }
 
 /**
- * Coverage is measured across the first-to-last sample span, so it detects
- * interior holes only. A gap at the head or tail of the activity is
- * indistinguishable from a shorter activity without a nominal duration from
- * Garmin, and guessing one would produce a confidently wrong quality score.
+ * Prefer nominal activity duration when available (duration-anchored coverage).
+ * That is the close Kindred shipped first: a missing leading 20 minutes of a
+ * 3h ride becomes coverage_ratio ≈ 0.889 instead of "shorter, fully-sampled".
+ * Without a duration, fall back to the first-to-last sample span and say so.
  */
-export function computeDataQuality(samples: RawSample[]): DataQuality {
+export function computeDataQuality(
+  samples: RawSample[],
+  options: { nominalDurationSeconds?: number } = {}
+): DataQuality {
   const interval = medianInterval(samples);
   const span = samples.length > 1 ? samples[samples.length - 1].t - samples[0].t : 0;
-  // Inclusive of both endpoints: a 10s span at 1s cadence is 11 samples.
-  const expected = span > 0 ? Math.round(span / interval) + 1 : samples.length;
+
+  let expected: number;
+  let coverage_anchor: CoverageAnchor;
+  const nominal = options.nominalDurationSeconds;
+  if (typeof nominal === "number" && Number.isFinite(nominal) && nominal > 0) {
+    // Inclusive of both endpoints, same as the span formula.
+    expected = Math.round(nominal / interval) + 1;
+    coverage_anchor = "nominal_duration";
+  } else {
+    // Inclusive of both endpoints: a 10s span at 1s cadence is 11 samples.
+    expected = span > 0 ? Math.round(span / interval) + 1 : samples.length;
+    coverage_anchor = "sample_span";
+  }
 
   let longestGap = 0;
   for (let i = 1; i < samples.length; i += 1) {
@@ -241,12 +277,22 @@ export function computeDataQuality(samples: RawSample[]): DataQuality {
     if (delta > longestGap) longestGap = delta;
   }
 
+  // Head/tail gaps against a nominal duration are not interior holes, so they
+  // do not raise longest_gap_seconds. Surface them via coverage_ratio instead.
+  if (coverage_anchor === "nominal_duration" && samples.length > 0 && typeof nominal === "number") {
+    const headGap = Math.max(0, samples[0].t);
+    const tailGap = Math.max(0, nominal - samples[samples.length - 1].t);
+    const edge = Math.max(headGap, tailGap);
+    if (edge > longestGap) longestGap = edge;
+  }
+
   return {
     expected_samples: expected,
     actual_samples: samples.length,
     coverage_ratio: expected > 0 ? round(Math.min(samples.length / expected, 1), 3) : 1,
     longest_gap_seconds: round(longestGap, 1),
-    sample_interval_seconds: round(interval, 2)
+    sample_interval_seconds: round(interval, 2),
+    coverage_anchor
   };
 }
 
@@ -379,12 +425,83 @@ export function extractSamples(payload: GarminDetailsPayload, metric: SeriesMetr
   return samples;
 }
 
+/** Pull nominal duration (seconds) from a Garmin activity summary row. */
+export function pickActivityDurationSeconds(summary: Record<string, unknown> | null | undefined): number | undefined {
+  if (!summary || typeof summary !== "object") return undefined;
+  const candidates = [
+    summary.duration,
+    summary.elapsedDuration,
+    summary.movingDuration,
+    summary.durationInSeconds,
+    summary.elapsedDurationInSeconds,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.duration,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.elapsedDuration
+  ];
+  for (const value of candidates) {
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+}
+
+/** Pull recorded max HR from a Garmin activity summary row. */
+export function pickActivityMaxHr(summary: Record<string, unknown> | null | undefined): number | undefined {
+  if (!summary || typeof summary !== "object") return undefined;
+  const candidates = [
+    summary.maxHR,
+    summary.maxHeartRate,
+    summary.maxHeartRateInBeatsPerMinute,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.maxHR,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.maxHeartRate
+  ];
+  for (const value of candidates) {
+    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+    if (Number.isFinite(n) && n >= 100 && n <= 240) return n;
+  }
+  return undefined;
+}
+
+/** Pull start clock (ISO-ish string) from a Garmin activity summary row. */
+export function pickActivityStartTime(summary: Record<string, unknown> | null | undefined): string | undefined {
+  if (!summary || typeof summary !== "object") return undefined;
+  const candidates = [
+    summary.startTimeGMT,
+    summary.startTimeLocal,
+    summary.beginTimestamp,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.startTimeGMT,
+    (summary.summaryDTO as Record<string, unknown> | undefined)?.startTimeLocal
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      // Garmin sometimes ships epoch ms.
+      const ms = value > 1e12 ? value : value * 1000;
+      return new Date(ms).toISOString();
+    }
+  }
+  return undefined;
+}
+
 export interface BuildActivitySeriesOptions {
   activityId: string | number;
   metric: SeriesMetric;
   resolutionSeconds?: number;
   maxPoints?: number;
+  /** Caller-supplied reference max HR (zones comparable across activities). */
   referenceMaxHr?: number;
+  /**
+   * Max HR recorded on the activity summary row (Garmin maxHR / maxHeartRate).
+   * Used when the caller did not pass referenceMaxHr — preferred over the
+   * series-observed max so zones match the activity card.
+   */
+  activityRecordedMaxHr?: number;
+  /**
+   * Nominal activity duration in seconds from the activity row. Enables
+   * duration-anchored coverage (Kindred pattern). Omit only when unknown.
+   */
+  nominalDurationSeconds?: number;
+  /** Absolute start clock for the envelope, when known (ISO 8601). */
+  startTime?: string;
 }
 
 /**
@@ -401,7 +518,10 @@ export function buildActivitySeries(
     metric,
     resolutionSeconds = SERIES_DEFAULT_RESOLUTION_SECONDS,
     maxPoints = SERIES_DEFAULT_MAX_POINTS,
-    referenceMaxHr
+    referenceMaxHr,
+    activityRecordedMaxHr,
+    nominalDurationSeconds,
+    startTime
   } = options;
 
   const budget = Math.min(Math.max(1, Math.trunc(maxPoints)), SERIES_HARD_MAX_POINTS);
@@ -427,7 +547,7 @@ export function buildActivitySeries(
 
   const values = samples.map((sample) => sample.value);
   const stats = computeStats(values);
-  const dataQuality = computeDataQuality(samples);
+  const dataQuality = computeDataQuality(samples, { nominalDurationSeconds });
 
   const effective = resolveEffectiveResolution(samples, requested, budget);
   if (effective !== requested) {
@@ -450,18 +570,33 @@ export function buildActivitySeries(
 
   if (dataQuality.coverage_ratio < 0.9) {
     notes.push(
-      `Sparse series: ${dataQuality.actual_samples} of ~${dataQuality.expected_samples} expected samples (longest gap ${dataQuality.longest_gap_seconds}s). Treat the shape as indicative.`
+      `Sparse series: ${dataQuality.actual_samples} of ~${dataQuality.expected_samples} expected samples ` +
+        `(anchor=${dataQuality.coverage_anchor}, longest gap ${dataQuality.longest_gap_seconds}s). Treat the shape as indicative.`
     );
   }
 
   let timeInZone: TimeInZone | undefined;
   if (metric === "heart_rate") {
-    const source: TimeInZone["reference_source"] = referenceMaxHr ? "caller" : "observed_max";
-    const reference = referenceMaxHr ?? Math.round(stats.max);
+    let source: ReferenceSource;
+    let reference: number;
+    if (referenceMaxHr !== undefined) {
+      source = "caller_provided";
+      reference = referenceMaxHr;
+    } else if (
+      typeof activityRecordedMaxHr === "number" &&
+      Number.isFinite(activityRecordedMaxHr) &&
+      activityRecordedMaxHr > 0
+    ) {
+      source = "activity_recorded_max";
+      reference = Math.round(activityRecordedMaxHr);
+    } else {
+      source = "observed_max";
+      reference = Math.round(stats.max);
+    }
     timeInZone = computeTimeInZone(samples, dataQuality.sample_interval_seconds, reference, source);
-    if (source === "observed_max") {
+    if (source !== "caller_provided") {
       notes.push(
-        "reference_max_hr was derived from this activity's observed max, not a tested/lab max. Pass reference_max_hr for zones that compare across activities."
+        `reference_max_hr source=${source}. Pass reference_max_hr for zones that compare across activities.`
       );
     }
   }
@@ -471,6 +606,8 @@ export function buildActivitySeries(
     activity_id: activityId,
     metric,
     unit: METRIC_UNITS[metric],
+    start_time: startTime,
+    t_unit: "seconds_from_start",
     resolution_seconds: shouldDownsample ? effective : round(dataQuality.sample_interval_seconds, 2),
     requested_resolution_seconds: requested,
     points,

@@ -61,7 +61,7 @@ export const ActivitySeriesInputSchema = z.object({
   max_points: z.number().int().min(1).max(SERIES_HARD_MAX_POINTS).default(SERIES_DEFAULT_MAX_POINTS)
     .describe(`Point budget for the returned series. Server hard cap is ${SERIES_HARD_MAX_POINTS}.`),
   reference_max_hr: z.number().int().min(100).max(240).optional()
-    .describe("Reference max heart rate for zone math. Defaults to this activity's observed max, which is labelled as such."),
+    .describe("Reference max heart rate for zone math (reference_source=caller_provided). Without it, uses the activity row maxHR when available (activity_recorded_max), else the series observed max."),
   response_format: ResponseFormatSchema
 }).strict();
 
@@ -78,6 +78,9 @@ export const ActivitySeriesOutputSchema = z.object({
   activity_id: z.union([z.string(), z.number()]),
   metric: z.enum(SERIES_METRICS),
   unit: z.string(),
+  start_time: z.string().optional()
+    .describe("Absolute activity start (ISO 8601) when known. points[].t is relative to this."),
+  t_unit: z.literal("seconds_from_start"),
   resolution_seconds: z.number(),
   requested_resolution_seconds: z.number(),
   points: z.array(SeriesPointSchema),
@@ -93,7 +96,7 @@ export const ActivitySeriesOutputSchema = z.object({
   time_in_zone: z.object({
     zone_model: z.literal("percent_of_reference_max_hr"),
     reference_max_hr: z.number(),
-    reference_source: z.enum(["caller", "observed_max"]),
+    reference_source: z.enum(["caller_provided", "activity_recorded_max", "observed_max"]),
     zones: z.array(z.object({
       zone: z.number().int(),
       min_bpm: z.number(),
@@ -111,7 +114,8 @@ export const ActivitySeriesOutputSchema = z.object({
     actual_samples: z.number().int().nonnegative(),
     coverage_ratio: z.number().min(0).max(1),
     longest_gap_seconds: z.number().nonnegative(),
-    sample_interval_seconds: z.number().positive()
+    sample_interval_seconds: z.number().positive(),
+    coverage_anchor: z.enum(["nominal_duration", "sample_span"])
   }).strict(),
   notes: z.array(z.string())
 }).strict();

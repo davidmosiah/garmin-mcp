@@ -1,3 +1,27 @@
+## 0.7.1 - 2026-08-05
+
+### Added
+
+- **`agent-safe-series/v1` parity with Mi Fitness Data Bridge** (Kindred,
+  [shkyyy18/mi-fitness-data-bridge@1647472](https://github.com/shkyyy18/mi-fitness-data-bridge/commit/1647472),
+  design thread [#19](https://github.com/davidmosiah/garmin-mcp/issues/19)):
+  - `data_quality.coverage_anchor`: `nominal_duration` | `sample_span`. When the
+    activity summary carries a duration, expected samples are derived from it so a
+    missing leading/trailing segment reports `coverage_ratio < 1` instead of looking
+    like a shorter, fully-sampled workout. Pattern invented and first shipped on the
+    Xiaomi side — we adopted it.
+  - `start_time` + `t_unit: "seconds_from_start"` on the series envelope.
+  - `time_in_zone.reference_source` expanded to the shared vocabulary
+    `caller_provided` | `activity_recorded_max` | `observed_max` (was `caller` |
+    `observed_max`). Tool layer fetches the activity summary in parallel with
+    details so duration, recorded max HR and start clock feed the contract without
+    an extra agent call.
+
+### Changed
+
+- **Breaking (series enum only):** `reference_source: "caller"` is now
+  `"caller_provided"` to match the shared contract. Zone math is unchanged.
+
 ## 0.7.0 - 2026-08-01
 
 ### Fixed

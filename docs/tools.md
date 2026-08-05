@@ -49,21 +49,24 @@ and states precisely what it discarded.
 | Field | Meaning |
 | --- | --- |
 | `metric` | `heart_rate`, `power`, `cadence`, `speed`, `elevation`. GPS is never available here. |
+| `start_time` / `t_unit` | Absolute start when known; `points[].t` is always seconds from that start. |
 | `resolution_seconds` | Bucket width actually used. Raised automatically when the request would exceed `max_points`. |
 | `max_points` | Point budget, default 400. Server hard cap is 500, even if you ask for more. |
 | `stats` | `avg`/`min`/`max`/`p25`/`p50`/`p75`, always computed on **full-resolution** samples, never on buckets. `percentile_method` is named so you can reproduce them. |
 | `points[]` | `{t, value, min, max, samples}` — intra-bucket spread stays visible instead of being flattened. |
-| `time_in_zone` | Five bands of a reference max HR. `reference_source` says whether the reference came from you or from this activity's observed max. |
+| `time_in_zone` | Five bands of a reference max HR. `reference_source` is one of `caller_provided` / `activity_recorded_max` / `observed_max`. |
 | `downsampled`, `source_points`, `returned_points`, `method` | Explicit loss accounting, so the agent never invents precision. |
-| `data_quality` | `expected_samples`, `coverage_ratio`, `longest_gap_seconds`, `sample_interval_seconds`. |
+| `data_quality` | `expected_samples`, `actual_samples`, `coverage_ratio`, `coverage_anchor`, `longest_gap_seconds`, `sample_interval_seconds`. |
 
 Measured on the synthetic 3-hour fixture: **10,800 samples (379 KB) → 180 points
 (11.3 KB), a 97% reduction**, with `avg`/`min`/`max`/percentiles still exact.
 
-Known limit, stated rather than hidden: `coverage_ratio` is measured across the
-first-to-last sample span, so it detects interior holes only. A gap at the very
-start or end is indistinguishable from a shorter activity without a nominal
-duration from Garmin.
+`coverage_anchor: "nominal_duration"` uses the activity row duration so a missing
+leading 20 minutes of a 3h ride reports `coverage_ratio ≈ 0.889` instead of
+"shorter, fully-sampled". Falls back to `sample_span` (interior holes only) when
+Garmin does not return a duration. That close came from
+[Mi Fitness Data Bridge](https://github.com/shkyyy18/mi-fitness-data-bridge)
+(`agent-safe-series/v1`, commit `1647472`).
 
 The response shape is aligned with the Mi Fitness Data Bridge (Kindred)
 `workout_series` contract — see [issue #19](https://github.com/davidmosiah/garmin-mcp/issues/19) —
