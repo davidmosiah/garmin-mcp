@@ -134,8 +134,11 @@ Next steps
 {
   "ok": true,
   "node": { "version": "22.22.2", "supported": true },
+  "required_env": {},
+  "missing_env": [],
   "automatic_auth_supported": true,
   "privacy_mode": "structured",
+  "config": { "exists": true, "source": "local_config" },
   "token": {
     "exists": true,
     "readable": true,
@@ -150,6 +153,11 @@ Next steps
   ]
 }
 ```
+
+`required_env` and `missing_env` are empty because this connector needs no
+environment variables — Garmin auth lives in the local token file. `config`
+reports the optional `~/.garmin-mcp/config.json` that `setup` writes
+(`"source": "missing"` if you never ran `setup`).
 
 ## First agent call
 

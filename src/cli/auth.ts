@@ -146,11 +146,26 @@ async function runPythonAuth(args: string[], json: boolean): Promise<number> {
   }
 }
 
-function printAuthSuccess(json: boolean, tokenPath: string): number {
-  chmodSync(tokenPath, 0o600);
+/**
+ * The exact payload `auth --json` prints on success.
+ *
+ * Exported so the docs contract gate can compare the published example against
+ * what this function really returns, instead of against a copy of itself.
+ * `display_name` is only present when the token file carries one, which today
+ * means the legacy Python helper path.
+ */
+export function buildAuthSuccessPayload(tokenPath: string): {
+  ok: true;
+  token_path: string;
+  permissions: string;
+  has_di_token: boolean;
+  has_refresh_token: boolean;
+  display_name?: string;
+  next_step: string;
+} {
   const stat = statSync(tokenPath);
   const payload = JSON.parse(readFileSync(tokenPath, "utf8")) as Record<string, unknown>;
-  const result = {
+  return {
     ok: true,
     token_path: tokenPath,
     permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
@@ -159,6 +174,11 @@ function printAuthSuccess(json: boolean, tokenPath: string): number {
     display_name: typeof payload.display_name === "string" ? payload.display_name : undefined,
     next_step: "Run `garmin-mcp-server doctor`, then start your MCP client."
   };
+}
+
+function printAuthSuccess(json: boolean, tokenPath: string): number {
+  chmodSync(tokenPath, 0o600);
+  const result = buildAuthSuccessPayload(tokenPath);
   if (json) console.log(JSON.stringify(result, null, 2));
   else {
     console.log("");

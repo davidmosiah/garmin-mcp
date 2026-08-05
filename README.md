@@ -166,3 +166,6 @@ MIT — see [LICENSE](LICENSE).
 ## Disclaimer
 
 This software is provided as-is. It is not a medical device, does not provide medical advice, and should not be used for diagnosis or treatment. The unofficial Garmin Connect mode can break if Garmin changes private auth or endpoints. Always consult qualified professionals for medical concerns.
+
+**Daily brief demo:** [docs/daily-brief-demo.md](docs/daily-brief-demo.md)
+
