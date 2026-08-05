@@ -153,7 +153,7 @@ function demoWellnessContext(date: string) {
  */
 function demoBodyBatteryDay(date: string) {
   return {
-    endpoint: `/wellness-service/wellness/bodyBattery/reports/daily/${date}`,
+    endpoint: `/wellness-service/wellness/bodyBattery/reports/daily?startDate=${date}&endDate=${date}`,
     privacy_mode: "structured",
     data: {
       calendarDate: date,
