@@ -83,6 +83,9 @@ async function dailyBundle(client: SummaryClient, date: string) {
   const noName = isObject(name) ? { error: name.error, endpoint: "displayName" } : undefined;
   const byName = (path: string) => noName ? Promise.resolve(noName) : safeGet(client, path.replace("{displayName}", name as string));
 
+  // bodyBattery/reports/daily needs startDate/endDate query params (path-segment date 404s)
+  // and returns an array of daily entries; unwrap to the single day we asked for so
+  // downstream isObject(bundle.bodyBattery) checks keep working.
   const [daily, chart, sleep, heart, hrv, stress, bodyBattery, trainingReadiness, trainingStatus, respiration, spo2] = await Promise.all([
     byName(`/usersummary-service/usersummary/daily/{displayName}?calendarDate=${date}`),
     byName(`/wellness-service/wellness/dailySummaryChart/{displayName}?date=${date}`),
@@ -90,7 +93,7 @@ async function dailyBundle(client: SummaryClient, date: string) {
     byName(`/wellness-service/wellness/dailyHeartRate/{displayName}?date=${date}`),
     safeGet(client, `/hrv-service/hrv/${date}`),
     safeGet(client, `/wellness-service/wellness/dailyStress/${date}`),
-    safeGet(client, `/wellness-service/wellness/bodyBattery/reports/daily/${date}`),
+    safeGet(client, `/wellness-service/wellness/bodyBattery/reports/daily?startDate=${date}&endDate=${date}`).then((v) => (Array.isArray(v) ? (v[0] ?? {}) : v)),
     safeGet(client, `/metrics-service/metrics/trainingreadiness/${date}`),
     safeGet(client, `/metrics-service/metrics/trainingstatus/aggregated/${date}`),
     safeGet(client, `/wellness-service/wellness/daily/respiration/${date}`),

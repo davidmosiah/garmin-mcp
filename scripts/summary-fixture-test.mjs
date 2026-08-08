@@ -27,8 +27,12 @@ const fakeClient = {
     if (endpoint.includes('/dailyStress/')) {
       return { avgStressLevel: 28, maxStressLevel: 65 };
     }
-    if (endpoint.includes('/bodyBattery/reports/daily/')) {
-      return { charged: 55, drained: 42, bodyBatteryValuesArray: [[1, 68], [2, 54]] };
+    const bodyBatteryRange = endpoint.match(
+      /\/wellness-service\/wellness\/bodyBattery\/reports\/daily\?startDate=([^&]+)&endDate=([^&]+)$/
+    );
+    if (bodyBatteryRange && bodyBatteryRange[1] === bodyBatteryRange[2]) {
+      // Real Garmin endpoint returns an array (one entry per day in the requested range).
+      return [{ charged: 55, drained: 42, bodyBatteryValuesArray: [[1, 68], [2, 54]] }];
     }
     if (endpoint.includes('/trainingreadiness/')) {
       return { score: 72 };

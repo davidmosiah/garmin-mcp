@@ -120,7 +120,7 @@ function registerCollectionTool(server: McpServer, name: string, title: string, 
   );
 }
 
-function registerDateTool(server: McpServer, name: string, title: string, endpointBuilder: DateEndpointBuilder, description: string): void {
+function registerDateTool(server: McpServer, name: string, title: string, endpointBuilder: DateEndpointBuilder, description: string, unwrap?: (data: unknown) => unknown): void {
   server.registerTool(
     name,
     {
@@ -137,13 +137,24 @@ function registerDateTool(server: McpServer, name: string, title: string, endpoi
         const privacyMode = resolvePrivacyMode(config, params.privacy_mode, { explicit_user_intent: (params as { explicit_user_intent?: boolean }).explicit_user_intent, include_gps: (params as { include_gps?: boolean }).include_gps });
         const date = dateValue(params.date);
         const endpoint = await endpointBuilder(garmin, date);
-        const data = applyPrivacy(endpoint, await garmin.get(endpoint), privacyMode);
+        const raw = await garmin.get(endpoint);
+        const data = applyPrivacy(endpoint, unwrap ? unwrap(raw) : raw, privacyMode);
         return makeResponse({ endpoint, privacy_mode: privacyMode, data }, params.response_format, bulletList(title, { endpoint, date, data: JSON.stringify(data) }));
       } catch (error) {
         return makeError((error as Error).message);
       }
     }
   );
+}
+
+/**
+ * Garmin's bodyBattery/reports/daily endpoint no longer accepts a date as a path
+ * segment (that 404s). It requires startDate/endDate as query params and returns
+ * an array (one entry per day in range). We query a single-day range and unwrap
+ * to keep this tool's existing single-object contract for callers.
+ */
+function unwrapSingleDayArray(data: unknown): unknown {
+  return Array.isArray(data) ? (data[0] ?? {}) : data;
 }
 
 function registerGetByIdTool(server: McpServer, name: string, title: string, endpointBuilder: (id: string | number) => string, description: string): void {
@@ -497,7 +508,7 @@ export function registerGarminTools(server: McpServer): void {
   registerDateTool(server, "garmin_get_heart_day", "Garmin Daily Heart Rate", async (garmin, date) => `/wellness-service/wellness/dailyHeartRate/${await displayName(garmin)}?date=${date}`, "Get Garmin daily heart-rate samples and resting heart-rate context for a date. Not medical advice.");
   registerDateTool(server, "garmin_get_sleep_day", "Garmin Daily Sleep", async (garmin, date) => `/wellness-service/wellness/dailySleepData/${await displayName(garmin)}?date=${date}&nonSleepBufferMinutes=60`, "Get Garmin sleep summary, stages and sleep window for a date. Not medical advice.");
   registerDateTool(server, "garmin_get_stress_day", "Garmin Daily Stress", (_garmin, date) => `/wellness-service/wellness/dailyStress/${date}`, "Get Garmin stress summary and samples for a date. Not medical advice.");
-  registerDateTool(server, "garmin_get_body_battery_day", "Garmin Body Battery", (_garmin, date) => `/wellness-service/wellness/bodyBattery/reports/daily/${date}`, "Get Garmin Body Battery daily report for a date. Not medical advice.");
+  registerDateTool(server, "garmin_get_body_battery_day", "Garmin Body Battery", (_garmin, date) => `/wellness-service/wellness/bodyBattery/reports/daily?startDate=${date}&endDate=${date}`, "Get Garmin Body Battery daily report for a date. Not medical advice.", unwrapSingleDayArray);
   registerDateTool(server, "garmin_get_body_battery_events", "Garmin Body Battery Events", (_garmin, date) => `/wellness-service/wellness/bodyBattery/events/${date}`, "Get Garmin Body Battery charge/drain events for a date. Not medical advice.");
   registerDateTool(server, "garmin_get_hrv_day", "Garmin HRV", (_garmin, date) => `/hrv-service/hrv/${date}`, "Get Garmin HRV status and overnight HRV metrics for a date when available. Not medical advice.");
   registerDateTool(server, "garmin_get_training_readiness_day", "Garmin Training Readiness", (_garmin, date) => `/metrics-service/metrics/trainingreadiness/${date}`, "Get Garmin training readiness for a date when supported by the device/account. Not medical advice.");
