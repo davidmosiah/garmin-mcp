@@ -32,7 +32,8 @@ import { buildDemoPayload } from '../dist/services/demo.js';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 const DEFAULT_PRIVACY_MODE = 'structured';
-const BODY_BATTERY_ENDPOINT = `/wellness-service/wellness/bodyBattery/reports/daily/${TODAY}`;
+// Live Garmin uses query params; path-segment date 404s (see #20).
+const BODY_BATTERY_ENDPOINT = `/wellness-service/wellness/bodyBattery/reports/daily?startDate=${TODAY}&endDate=${TODAY}`;
 
 /** Synthetic Garmin Connect responses. No real health data, no real coordinates. */
 const BODY_BATTERY_RAW = {
@@ -83,7 +84,14 @@ const stubClient = {
       return { hrvSummary: { lastNightAvg: 48.2, weeklyAvg: 46.1, status: 'BALANCED' } };
     }
     if (endpoint.includes('/dailyStress/')) return { avgStressLevel: 28, maxStressLevel: 65 };
-    if (endpoint.includes('/bodyBattery/reports/daily/')) return BODY_BATTERY_RAW;
+    // Exact query-param form only (legacy path-segment form must not match).
+    const bodyBatteryRange = endpoint.match(
+      /\/wellness-service\/wellness\/bodyBattery\/reports\/daily\?startDate=([^&]+)&endDate=([^&]+)$/
+    );
+    if (bodyBatteryRange && bodyBatteryRange[1] === bodyBatteryRange[2]) {
+      // Real API returns an array of daily entries; tools/summary unwrap to one object.
+      return [BODY_BATTERY_RAW];
+    }
     if (endpoint.includes('/trainingreadiness/')) return { score: 72 };
     if (endpoint.includes('/trainingstatus/')) return { trainingStatus: 'MAINTAINING' };
     if (endpoint.includes('/daily/respiration/')) return { avgWakingRespirationValue: 14.2 };

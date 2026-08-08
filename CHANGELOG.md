@@ -1,3 +1,10 @@
+## 0.7.2 - 2026-08-06
+
+### Fixed
+- Body Battery daily report no longer 404s: Garmin requires `startDate`/`endDate` query params (not a path date). Tools and daily/weekly summary unwrap the array response so the single-day contract is preserved ([#20](https://github.com/davidmosiah/garmin-mcp/pull/20) by @oysteinhagenpettersen).
+- Demo-contract stub matches the live query-param endpoint (no soft body-battery miss in summary during tests).
+- `date` inputs must be `yyyy-MM-dd` or `today` (civil-date only).
+
 ## 0.7.1 - 2026-08-05
 
 ### Added

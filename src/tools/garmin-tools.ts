@@ -76,9 +76,14 @@ function client(): GarminClient {
   return new GarminClient(getConfig());
 }
 
+/** Civil date only — rejects path/query injection into Garmin endpoint URLs. */
 function dateValue(value: string): string {
   if (value === "today") return new Date().toISOString().slice(0, 10);
-  return value.slice(0, 10);
+  const civil = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(civil)) {
+    throw new Error(`Invalid date: ${value}. Use yyyy-MM-dd or today.`);
+  }
+  return civil;
 }
 
 async function displayName(client: GarminClient): Promise<string> {
