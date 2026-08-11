@@ -151,6 +151,10 @@ The full [Delx Wellness](https://wellness.delx.ai) connector library:
 
 <!-- /delx-wellness see-also -->
 
+## Related local-first health MCP
+
+Peer (not a Delx package): **[mi-fitness-data-bridge](https://github.com/shkyyy18/mi-fitness-data-bridge)** by [Kindred / @shkyyy18](https://github.com/shkyyy18) — Xiaomi Mi Fitness, local-first, shares the **agent-safe-series/v1** dense series envelope (duration-anchored coverage, hard `max_points`, full-res stats, no GPS in series tools). Design log: [#19](https://github.com/davidmosiah/garmin-mcp/issues/19) · parity notes: [docs/agent-safe-series-kindred.md](docs/agent-safe-series-kindred.md).
+
 ## 📧 Contact & Support
 
 - 📨 **support@delx.ai** — general questions, integration help, partnerships
