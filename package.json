@@ -1,6 +1,6 @@
 {
   "name": "garmin-mcp-unofficial",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Unofficial local-first Garmin MCP server for AI health, sleep and activity agents.",
   "type": "module",
   "bin": {
@@ -98,8 +98,8 @@
   "overrides": {
     "qs": "6.15.2",
     "hono": "4.12.27",
-    "fast-uri": "3.1.4",
-    "ip-address": "10.2.0",
+    "fast-uri": "3.1.5",
+    "ip-address": "10.4.0",
     "esbuild": "0.28.1",
     "@hono/node-server": "2.0.12",
     "body-parser": "2.3.0"

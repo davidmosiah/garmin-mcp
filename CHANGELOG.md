@@ -118,6 +118,11 @@
 
 # Changelog
 
+## 0.7.3
+
+- Security: override `fast-uri@3.1.5` and `ip-address@10.4.0` (high Dependabot).
+
+
 ## 0.5.4 - 2026-07-16
 
 ### Fixed
