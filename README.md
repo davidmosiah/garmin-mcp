@@ -66,6 +66,18 @@ npx -y garmin-mcp-unofficial auth             # built-in login, prompts for cred
 npx -y garmin-mcp-unofficial doctor           # verifies you're ready
 ```
 
+## HTTP (v2 stateless)
+
+Default is **stdio**. Optional Streamable HTTP — no session id, JSON responses, loopback only:
+
+```bash
+npx -y garmin-mcp-unofficial --http
+# GET  http://127.0.0.1:3000/health
+# POST http://127.0.0.1:3000/mcp   (sessionless)
+```
+
+Env: `GARMIN_MCP_HOST`, `GARMIN_MCP_PORT`, `GARMIN_MCP_TRANSPORT=http`.
+
 Or one shot: `npx -y garmin-mcp-unofficial setup --auth`
 
 `auth` runs a self-contained Node login and prompts locally for Garmin email, password and MFA when needed. The MCP **does not store your Garmin password** — only Garmin Connect tokens, saved at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions. See the [auth quickstart walkthrough](examples/auth-quickstart.md) for real terminal output, or [docs/quickstart.md](docs/quickstart.md) for the full flow.
