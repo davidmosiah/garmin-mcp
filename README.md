@@ -29,7 +29,7 @@
 > ⚡ **One-command install** with [Delx Wellness for Hermes](https://github.com/davidmosiah/delx-wellness-hermes):
 > `npx -y delx-wellness-hermes setup` &mdash; preconfigures this connector and the full Delx Wellness stack in a dedicated Hermes profile.
 >
-> Or wire it standalone into Claude Desktop / Cursor / ChatGPT Desktop &mdash; see the install section below. Runnable examples live in the [Delx Agent Workbench](https://github.com/davidmosiah/delx-agent-workbench).
+> Or wire it standalone into Claude Desktop / Cursor / ChatGPT Desktop &mdash; see the install section below. Runnable examples live in the [Delx Wellness hub](https://github.com/davidmosiah/delx-wellness#run-it-in-your-agent).
 
 > **Public proof:** Garmin MCP is tracked in the Delx [Open Source Growth Snapshot](https://github.com/davidmosiah/delx-wellness/blob/main/docs/open-source-growth-snapshot.md) alongside downloads, stars and next-action priorities. If it saves you Garmin Connect and MCP setup time, star this repo so other training-focused agent builders can find it faster.
 >
@@ -133,7 +133,7 @@ See [docs/privacy.md](docs/privacy.md) for the full privacy model.
 
 ## See the full agent demo →
 
-Want to see a connector like this drive a real end-to-end decision? The shared, reproducible proof lives in [`delx-living-body`](https://github.com/davidmosiah/delx-wellness):
+Want to see a connector like this drive a real end-to-end decision? The shared, reproducible proof lives in [`delx-living-body`](https://github.com/davidmosiah/delx-living-body):
 
 ```bash
 npx -y delx-living-body demo
