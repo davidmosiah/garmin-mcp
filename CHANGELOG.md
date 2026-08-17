@@ -1,3 +1,11 @@
+## Unreleased
+
+### Fixed
+
+- `garmin_daily_summary`, `garmin_weekly_summary` and `garmin_wellness_context` now resolve the Garmin civil date in the caller `timezone` (IANA). Omitting it or passing `UTC` keeps the previous UTC-day behavior. Invalid names fall back to UTC ([#23](https://github.com/davidmosiah/garmin-mcp/issues/23)).
+- Daily `data_quality.missing_or_failed` is true when a metric is empty or the request failed, not only on thrown errors. `availability.sleep` / `availability.hrv` distinguish `present`, `empty` and `failed`, and `notes` tell agents that omitted overnight fields are not a recorded zero-sleep night.
+- Readiness no longer treats missing sleep as zero hours (`overnight_metrics_pending` instead of `sleep_limited`).
+
 ## 0.7.2 - 2026-08-06
 
 ### Fixed

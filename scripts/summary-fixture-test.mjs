@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { calendarDateString } from '../dist/services/calendar-date.js';
 import { buildDailySummary, buildWeeklySummary } from '../dist/services/summary.js';
 import { buildWellnessContext, formatWellnessContextMarkdown } from '../dist/services/context.js';
 
@@ -58,6 +59,11 @@ assert.equal(daily.scorecard.resting_heart_rate, 58);
 assert.equal(daily.scorecard.body_battery_end, 54);
 assert.equal(daily.scorecard.training_readiness_score, 72);
 assert.ok(daily.diagnostic.action_candidates.length >= 2);
+assert.equal(daily.data_quality.confidence, 'high');
+assert.equal(daily.data_quality.availability.sleep, 'present');
+assert.equal(daily.data_quality.availability.hrv, 'present');
+assert.equal(daily.data_quality.missing_or_failed.hrv, false);
+assert.deepEqual(daily.data_quality.notes, []);
 
 const weekly = await buildWeeklySummary(fakeClient, { days: 7, compare_days: 7, timezone: 'UTC' });
 assert.equal(weekly.kind, 'weekly_summary');
@@ -101,5 +107,107 @@ try {
   process.stderr.write = originalStderrWrite;
 }
 assert.match(capturedStderr, /\[garmin-mcp\] summary domain error: synthetic sleep contract failure/);
+
+const eveningUtc = Date.parse('2026-08-16T01:00:00.000Z');
+assert.equal(calendarDateString(0, 'America/New_York', eveningUtc), '2026-08-15');
+assert.equal(calendarDateString(0, 'UTC', eveningUtc), '2026-08-16');
+assert.equal(calendarDateString(0, undefined, eveningUtc), '2026-08-16');
+assert.equal(calendarDateString(0, 'Not/AZone', eveningUtc), '2026-08-16');
+assert.equal(calendarDateString(1, 'America/New_York', eveningUtc), '2026-08-14');
+
+// US spring-forward 2026-03-08: civil yesterday is 03-08, not 03-07 from a 24h subtract.
+const afterSpringForward = Date.parse('2026-03-09T04:30:00.000Z');
+assert.equal(calendarDateString(0, 'America/New_York', afterSpringForward), '2026-03-09');
+assert.equal(calendarDateString(1, 'America/New_York', afterSpringForward), '2026-03-08');
+
+const realNow = Date.now;
+Date.now = () => eveningUtc;
+try {
+  const eastern = await buildDailySummary(fakeClient, { days: 7, timezone: 'America/New_York' });
+  assert.equal(eastern.window.date, '2026-08-15');
+  assert.equal(eastern.window.timezone, 'America/New_York');
+  assert.equal(eastern.scorecard.hrv_last_night_avg, 48.2);
+  assert.equal(eastern.data_quality.availability.hrv, 'present');
+
+  const utcDay = await buildDailySummary(fakeClient, { days: 7, timezone: 'UTC' });
+  assert.equal(utcDay.window.date, '2026-08-16');
+
+  const omittedZone = await buildDailySummary(fakeClient, { days: 7 });
+  assert.equal(omittedZone.window.date, '2026-08-16');
+  assert.equal(omittedZone.window.timezone, 'UTC');
+
+  const invalidZone = await buildDailySummary(fakeClient, { days: 7, timezone: 'Not/AZone' });
+  assert.equal(invalidZone.window.date, '2026-08-16');
+  assert.equal(invalidZone.window.timezone, 'UTC');
+  assert.ok(invalidZone.data_quality.notes.some((note) => /Invalid IANA timezone/i.test(note)));
+
+  const requested = new Set();
+  const trackingClient = {
+    async getDisplayName() {
+      return 'fixture-user';
+    },
+    async get(endpoint) {
+      for (const match of endpoint.matchAll(/\d{4}-\d{2}-\d{2}/g)) requested.add(match[0]);
+      return fakeClient.get(endpoint);
+    }
+  };
+  const easternWeek = await buildWeeklySummary(trackingClient, { days: 7, compare_days: 0, timezone: 'America/New_York' });
+  assert.equal(easternWeek.window.timezone, 'America/New_York');
+  assert.ok(requested.has('2026-08-15'), `weekly window should include local today, got ${[...requested].join(',')}`);
+  assert.ok(!requested.has('2026-08-16'), 'weekly window must not jump to the UTC date after local evening');
+} finally {
+  Date.now = realNow;
+}
+
+const emptyOvernightClient = {
+  async getDisplayName() {
+    return 'fixture-user';
+  },
+  async get(endpoint) {
+    if (endpoint.includes('/dailySleepData/')) return { dailySleepDTO: {} };
+    if (endpoint.includes('/hrv-service/hrv/')) return { hrvSummary: {} };
+    return fakeClient.get(endpoint);
+  }
+};
+const emptyOvernight = await buildDailySummary(emptyOvernightClient, { days: 7, timezone: 'America/New_York' });
+assert.equal(emptyOvernight.data_quality.missing_or_failed.sleep, true);
+assert.equal(emptyOvernight.data_quality.missing_or_failed.hrv, true);
+assert.equal(emptyOvernight.data_quality.availability.sleep, 'empty');
+assert.equal(emptyOvernight.data_quality.availability.hrv, 'empty');
+assert.equal(emptyOvernight.data_quality.confidence, 'partial');
+assert.equal(emptyOvernight.diagnostic.readiness_context, 'overnight_metrics_pending');
+assert.ok(emptyOvernight.data_quality.notes.some((note) => /not a recorded zero-sleep night/i.test(note)));
+const emptyJson = JSON.parse(JSON.stringify(emptyOvernight));
+assert.equal(emptyJson.scorecard.sleep_minutes, undefined);
+assert.equal(emptyJson.scorecard.hrv_last_night_avg, undefined);
+assert.equal(emptyJson.data_quality.missing_or_failed.hrv, true);
+assert.equal(emptyJson.data_quality.availability.hrv, 'empty');
+
+let failedHrvStderr = '';
+const originalHrvStderr = process.stderr.write.bind(process.stderr);
+process.stderr.write = (chunk, ...args) => {
+  failedHrvStderr += String(chunk);
+  return true;
+};
+let failedHrv;
+try {
+  const failHrvClient = {
+    async getDisplayName() {
+      return 'fixture-user';
+    },
+    async get(endpoint) {
+      if (endpoint.includes('/hrv-service/hrv/')) throw new Error('synthetic hrv contract failure');
+      return fakeClient.get(endpoint);
+    }
+  };
+  failedHrv = await buildDailySummary(failHrvClient, { days: 7, timezone: 'UTC' });
+} finally {
+  process.stderr.write = originalHrvStderr;
+}
+assert.match(failedHrvStderr, /synthetic hrv contract failure/);
+assert.equal(failedHrv.data_quality.availability.hrv, 'failed');
+assert.equal(failedHrv.data_quality.missing_or_failed.hrv, true);
+assert.equal(failedHrv.data_quality.availability.sleep, 'present');
+assert.ok(failedHrv.data_quality.notes.some((note) => /HRV request failed/i.test(note)));
 
 console.log(JSON.stringify({ ok: true, daily: daily.kind, weekly: weekly.kind }, null, 2));

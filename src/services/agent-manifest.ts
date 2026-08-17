@@ -80,6 +80,7 @@ export function buildAgentManifest(client: AgentClientName = "generic") {
       "Explain that this is unofficial Garmin Connect personal mode, not Garmin Health API partnership access.",
       "For Hermes, do not restart the gateway for normal Garmin data access; reload MCP instead.",
       "Use garmin_wellness_context as the normalized handoff to exercise recommendation tools.",
+      "Pass an IANA timezone to garmin_daily_summary, garmin_weekly_summary and garmin_wellness_context so the Garmin calendar date matches the user's local day. If sleep/HRV fields are omitted, read data_quality.availability and notes — empty means not synced yet or absent, not a recorded zero-sleep night.",
       "Do not provide medical diagnosis or treatment instructions. Frame outputs as health/training context."
     ],
     troubleshooting: [
@@ -87,6 +88,7 @@ export function buildAgentManifest(client: AgentClientName = "generic") {
       { symptom: "401, expired token, or refresh failure", action: "Run `garmin-mcp-server auth` again. Garmin can invalidate personal tokens." },
       { symptom: "429 or repeated auth failures", action: "Back off, avoid repeated logins, then retry later. Garmin can rate-limit private auth." },
       { symptom: "endpoint changed or 404", action: "Treat as Garmin Connect drift. Open an issue with the endpoint and sanitized error." },
+      { symptom: "daily summary missing sleep/HRV after local evening", action: "Pass timezone (IANA, e.g. America/New_York). Check data_quality.availability — empty is not a zero-sleep night; overnight metrics usually attach after wake/sync." },
       { symptom: "Hermes configured but tools unavailable", action: "Run `/reload-mcp` or `hermes mcp test garmin`; do not restart gateway for normal reload." }
     ],
     links: {
@@ -142,6 +144,8 @@ Use this skill whenever a user asks Hermes to inspect Garmin activity, sleep, he
 - Start with \`mcp_garmin_garmin_connection_status\`.
 - If tokens are missing, ask the user to run \`garmin-mcp-server auth\` locally. Never ask them to paste Garmin passwords or token values into chat.
 - Prefer \`mcp_garmin_garmin_daily_summary\` and \`mcp_garmin_garmin_weekly_summary\` before low-level endpoint calls.
+- Pass the user's IANA timezone into those summaries so "today" is the local Garmin calendar date, not UTC.
+- If sleep/HRV fields are omitted, read \`data_quality.availability\` — empty is not a recorded zero-sleep night.
 - Treat Garmin data as sensitive. Do not request raw payloads unless the user explicitly asks.
 - Explain that this is unofficial Garmin Connect personal mode and can break if Garmin changes private auth or endpoints.
 - Do not diagnose or treat medical conditions.

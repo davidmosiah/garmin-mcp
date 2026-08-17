@@ -46,7 +46,12 @@ function demoDataQuality() {
       stress: false,
       body_battery: false,
       training_readiness: false
-    }
+    },
+    availability: {
+      sleep: "present",
+      hrv: "present"
+    },
+    notes: [] as string[]
   };
 }
 
@@ -184,6 +189,7 @@ export function buildDemoPayload() {
       "All sample data is synthetic; tagged with is_demo=true.",
       "Real calls return live data from Garmin Connect after local auth.",
       "Numeric fields are optional: Garmin omits metrics the device or account does not record, so treat every scorecard value as possibly undefined.",
+      "Pass an IANA timezone so the Garmin calendar date matches the user's local day. Empty sleep/HRV is data_quality.availability empty or failed, not a recorded zero-sleep night.",
       "Raw date tools such as garmin_get_body_battery_day wrap the Garmin payload in { endpoint, privacy_mode, data }; the shape of `data` depends on privacy_mode."
     ]
   };

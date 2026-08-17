@@ -138,15 +138,17 @@ export const AuthInstructionsInputSchema = z.object({
   response_format: ResponseFormatSchema
 }).strict();
 
+const TimezoneInputDescribe = "IANA timezone for the Garmin calendar date queried from Connect, e.g. America/New_York. Invalid names fall back to UTC. Omit or pass UTC to keep the previous UTC-day behavior.";
+
 export const DailySummaryInputSchema = z.object({
   days: z.number().int().min(1).max(30).default(7).describe("Lookback window for recent training context."),
-  timezone: z.string().min(1).max(80).default("UTC").describe("IANA timezone used only for display, e.g. America/New_York."),
+  timezone: z.string().min(1).max(80).default("UTC").describe(TimezoneInputDescribe),
   response_format: ResponseFormatSchema
 }).strict();
 
 export const WellnessContextInputSchema = z.object({
   days: z.number().int().min(1).max(30).default(7).describe("Lookback window for normalized Garmin wellness context."),
-  timezone: z.string().min(1).max(80).default("UTC").describe("IANA timezone used only for display, e.g. America/New_York."),
+  timezone: z.string().min(1).max(80).default("UTC").describe(TimezoneInputDescribe),
   soreness: z.array(z.string().min(1).max(80)).default([]),
   injury_flags: z.array(z.string().min(1).max(120)).default([]),
   notes: z.string().max(500).optional(),
@@ -156,7 +158,7 @@ export const WellnessContextInputSchema = z.object({
 export const WeeklySummaryInputSchema = z.object({
   days: z.number().int().min(7).max(60).default(7).describe("Recent analysis window in days."),
   compare_days: z.number().int().min(0).max(60).default(7).describe("Prior comparison window in days. Use 0 to disable comparison."),
-  timezone: z.string().min(1).max(80).default("UTC").describe("IANA timezone used only for display, e.g. America/New_York."),
+  timezone: z.string().min(1).max(80).default("UTC").describe(TimezoneInputDescribe),
   response_format: ResponseFormatSchema
 }).strict();
 

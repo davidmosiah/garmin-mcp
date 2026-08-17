@@ -13,6 +13,8 @@ Full reference for the [Garmin MCP](https://github.com/davidmosiah/garmin-mcp) s
 - `garmin_daily_summary` — daily readiness, sleep, load, action candidates
 - `garmin_weekly_summary` — scorecard, bottlenecks, next-week plan
 
+`timezone` on those summaries (and `garmin_wellness_context`) is an IANA name such as `America/New_York`. It selects the Garmin civil date sent to Connect, not just the display window. After UTC midnight, a US Eastern evening is still the previous local day — pass the user's zone or the tool queries a Garmin day whose night has not been slept yet. When sleep/HRV fields are omitted, `data_quality.availability` is `empty` or `failed` and `missing_or_failed` is true; omitted scorecard keys are not a recorded zero-sleep night. Invalid zone names fall back to UTC.
+
 **Auth & diagnostics**
 
 - `garmin_capabilities`, `garmin_agent_manifest`, `garmin_auth_instructions`, `garmin_privacy_audit`

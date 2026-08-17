@@ -48,6 +48,12 @@ Token budget is a product of tool design, not a request that the model “rememb
 
 There is no unrestricted per-second telemetry dump. Dense activity series remain an intentional deep-dive path, not the default agent flow. Design discussion with other local-first health MCPs: [issue #19](https://github.com/davidmosiah/garmin-mcp/issues/19).
 
+## Why did tonight's daily summary drop sleep and HRV?
+
+`garmin_daily_summary` queries Garmin by civil date. If you omit `timezone` (or pass `UTC`), "today" is the UTC calendar day. West of UTC, local evening after 00:00 UTC is already the next UTC date — a day whose night has not been slept yet — so sleep/HRV fields disappear from the JSON.
+
+Pass an IANA `timezone` (for example `America/New_York`) so the queried date matches the local day. After local midnight, last night's sleep is usually still on the previous Garmin date until wake/sync. In that case `data_quality.availability.sleep` / `.hrv` is `empty` (not synced yet or absent) or `failed` (request error), `missing_or_failed` is true, and `confidence` is `partial`. Do not treat omitted scorecard keys as a recorded zero-sleep night.
+
 ## Can Garmin break this?
 
 Yes. Personal Garmin Connect mode is unofficial and can break if Garmin changes private auth or endpoints. Open an issue with sanitized error output if that happens.
