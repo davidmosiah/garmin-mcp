@@ -14,6 +14,7 @@ MCP command: garmin-mcp-server
 - Auth failures: if HTTP 429, Cloudflare, or missing responseStatus.type appears, tell the user to stop retrying and follow docs/auth.md; repeated headless retries can worsen throttling.
 - Optional env: GARMIN_PRIVACY_MODE (summary|structured|raw, default structured), GARMIN_CACHE, GARMIN_CACHE_PATH.
 - Note: ToS-fragile by design — Garmin does not publish a public OAuth API for consumer data.
+- Pass an IANA timezone to garmin_daily_summary / garmin_weekly_summary so the Garmin calendar date is the user's local day. Empty sleep/HRV is data_quality.availability empty or failed, not a zero-sleep night.
 - Prefer JSON responses for automation and markdown responses for human summaries.
 - Tokens stay local under ~/.garmin-mcp/garmin_tokens.json (or GARMIN_TOKEN_PATH) and should never be printed.
 - Not medical advice. Use as trend context only — outputs are operational context, not medical, legal or financial advice.

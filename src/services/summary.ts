@@ -1,7 +1,8 @@
+import { calendarDateString, resolveIanaTimeZone } from "./calendar-date.js";
 import type { GarminClient } from "./garmin-client.js";
 import { redactErrorMessage } from "./redaction.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export type MetricAvailability = "present" | "empty" | "failed";
 
 type UnknownRecord = Record<string, unknown>;
 type SummaryClient = Pick<GarminClient, "get" | "getDisplayName">;
@@ -52,8 +53,8 @@ function percentDelta(current?: number, previous?: number): number | undefined {
   return ((current - previous) / previous) * 100;
 }
 
-function dateString(daysAgo = 0): string {
-  return new Date(Date.now() - daysAgo * DAY_MS).toISOString().slice(0, 10);
+function dateString(daysAgo = 0, timeZone?: string): string {
+  return calendarDateString(daysAgo, timeZone);
 }
 
 async function safeGet(client: SummaryClient, endpoint: string): Promise<unknown> {
@@ -205,14 +206,15 @@ function lastTupleNumber(values: unknown[]): number | undefined {
 }
 
 function classifyReadiness(stats: ReturnType<typeof dailyStats>): string {
-  const sleepHours = (stats.sleep_minutes ?? 0) / 60;
+  const sleepHours = stats.sleep_minutes === undefined ? undefined : stats.sleep_minutes / 60;
   const stress = stats.stress_avg ?? 0;
   const readiness = stats.training_readiness_score;
   const bodyBatteryEnd = stats.body_battery_end;
-  if (readiness !== undefined && readiness >= 70 && sleepHours >= 7) return "green_light";
+  if (readiness !== undefined && readiness >= 70 && sleepHours !== undefined && sleepHours >= 7) return "green_light";
   if (readiness !== undefined && readiness < 40) return "readiness_limited";
-  if (sleepHours < 6 && stress >= 45) return "recovery_risk";
-  if (sleepHours < 6) return "sleep_limited";
+  if (sleepHours !== undefined && sleepHours < 6 && stress >= 45) return "recovery_risk";
+  if (sleepHours !== undefined && sleepHours < 6) return "sleep_limited";
+  if (sleepHours === undefined && !stats.has_sleep_error) return "overnight_metrics_pending";
   if (bodyBatteryEnd !== undefined && bodyBatteryEnd < 35) return "low_body_battery";
   if ((stats.active_minutes ?? 0) >= 120) return "high_load";
   return "neutral";
@@ -225,9 +227,10 @@ function buildActions(stats: ReturnType<typeof dailyStats>, weekly?: ReturnType<
   if (state === "readiness_limited") actions.push("Keep training intensity low today; Garmin training readiness is suppressed, so protect recovery before adding load.");
   if (state === "recovery_risk") actions.push("Prioritize a low-stress day: short sleep plus elevated stress is a poor setup for hard training.");
   if (state === "sleep_limited") actions.push("Move the biggest health lever first: sleep timing, evening light/stimulation, caffeine cutoff and consistent wake time.");
+  if (state === "overnight_metrics_pending") actions.push("Overnight sleep/HRV are not on this Garmin calendar date yet; wait for wake/sync before using them in today's plan. Last night is usually still on the previous date until then.");
   if (state === "low_body_battery") actions.push("Use Body Battery as a pacing signal: schedule demanding blocks earlier or reduce non-essential stressors.");
   if (state === "high_load") actions.push("Protect connective tissue: add mobility, zone 1/2 recovery or a lighter session before another hard day.");
-  if ((stats.resting_heart_rate ?? 0) > 0 && (stats.sleep_minutes ?? 0) < 360) actions.push("Watch resting heart rate alongside poor sleep; avoid interpreting one metric in isolation.");
+  if ((stats.resting_heart_rate ?? 0) > 0 && stats.sleep_minutes !== undefined && stats.sleep_minutes < 360) actions.push("Watch resting heart rate alongside poor sleep; avoid interpreting one metric in isolation.");
   if (weekly?.avg_sleep_hours !== undefined && weekly.avg_sleep_hours < 6.5) actions.push("Weekly sleep average is below 6.5h; recovery improvements may beat training complexity.");
   if (weekly?.avg_stress !== undefined && weekly.avg_stress >= 45) actions.push("Weekly stress is elevated; add a measurable downshift habit such as 10 minutes easy walk or breathwork after work.");
   actions.push("This is not medical advice; use Garmin as trend context and escalate symptoms or abnormal vitals to a clinician.");
@@ -254,7 +257,8 @@ function aggregateStats(days: ReturnType<typeof dailyStats>[]) {
 }
 
 export async function buildDailySummary(client: SummaryClient, options: SummaryOptions) {
-  const date = dateString(0);
+  const timezone = resolveIanaTimeZone(options.timezone);
+  const date = dateString(0, timezone);
   const bundle = await dailyBundle(client, date);
   const stats = dailyStats(bundle);
   const readiness = classifyReadiness(stats);
@@ -262,19 +266,8 @@ export async function buildDailySummary(client: SummaryClient, options: SummaryO
   return {
     kind: "daily_summary" as const,
     generated_at: new Date().toISOString(),
-    window: { date, days: options.days, timezone: options.timezone ?? "UTC" },
-    data_quality: {
-      confidence: [stats.has_daily_error, stats.has_sleep_error, stats.has_heart_error].filter(Boolean).length === 0 ? "high" : "partial",
-      missing_or_failed: {
-        daily: stats.has_daily_error,
-        sleep: stats.has_sleep_error,
-        heart: stats.has_heart_error,
-        hrv: stats.has_hrv_error,
-        stress: stats.has_stress_error,
-        body_battery: stats.has_body_battery_error,
-        training_readiness: stats.has_training_readiness_error
-      }
-    },
+    window: { date, days: options.days, timezone },
+    data_quality: buildDailyDataQuality(stats, date, timezone, options.timezone),
     scorecard: stats,
     diagnostic: {
       readiness_context: readiness,
@@ -291,10 +284,11 @@ export async function buildDailySummary(client: SummaryClient, options: SummaryO
 export async function buildWeeklySummary(client: SummaryClient, options: SummaryOptions) {
   const days = Math.max(options.days, 7);
   const compareDays = options.compare_days ?? 7;
-  const currentBundles = await Promise.all(Array.from({ length: days }, (_, index) => dailyBundle(client, dateString(index))));
+  const timezone = resolveIanaTimeZone(options.timezone);
+  const currentBundles = await Promise.all(Array.from({ length: days }, (_, index) => dailyBundle(client, dateString(index, timezone))));
   const current = currentBundles.map(dailyStats).reverse();
   const previous = compareDays > 0
-    ? (await Promise.all(Array.from({ length: compareDays }, (_, index) => dailyBundle(client, dateString(days + index))))).map(dailyStats).reverse()
+    ? (await Promise.all(Array.from({ length: compareDays }, (_, index) => dailyBundle(client, dateString(days + index, timezone))))).map(dailyStats).reverse()
     : [];
   const currentStats = aggregateStats(current);
   const previousStats = previous.length ? aggregateStats(previous) : undefined;
@@ -302,7 +296,7 @@ export async function buildWeeklySummary(client: SummaryClient, options: Summary
   return {
     kind: "weekly_summary" as const,
     generated_at: new Date().toISOString(),
-    window: { days, compare_days: compareDays, timezone: options.timezone ?? "UTC" },
+    window: { days, compare_days: compareDays, timezone },
     data_quality: {
       days_with_daily_summary: current.filter((day) => day.steps !== undefined).length,
       days_with_sleep: currentStats.days_with_sleep,
@@ -342,11 +336,60 @@ export async function buildWeeklySummary(client: SummaryClient, options: Summary
   };
 }
 
+function metricAvailability(failed: boolean, present: boolean): MetricAvailability {
+  if (failed) return "failed";
+  return present ? "present" : "empty";
+}
+
+function buildDailyDataQuality(
+  stats: ReturnType<typeof dailyStats>,
+  date: string,
+  timezone: string,
+  requestedTimeZone?: string
+) {
+  const sleep = metricAvailability(stats.has_sleep_error, stats.sleep_minutes !== undefined);
+  const hrv = metricAvailability(
+    stats.has_hrv_error,
+    stats.hrv_last_night_avg !== undefined || stats.hrv_weekly_avg !== undefined || stats.hrv_status !== undefined
+  );
+  const dailyMissing = stats.has_daily_error || (stats.steps === undefined && stats.calories_total === undefined);
+  const heartMissing = stats.has_heart_error || (
+    stats.resting_heart_rate === undefined && stats.min_heart_rate === undefined && stats.max_heart_rate === undefined
+  );
+  const notes: string[] = [];
+  if (requestedTimeZone?.trim() && resolveIanaTimeZone(requestedTimeZone) === "UTC" && requestedTimeZone.trim() !== "UTC") {
+    notes.push("Invalid IANA timezone; the Garmin calendar date fell back to UTC.");
+  }
+  if (sleep === "empty" || hrv === "empty") {
+    notes.push(
+      `Overnight sleep/HRV fields are empty for Garmin calendar date ${date} (${timezone}). They usually attach after wake and sync, typically on the wake date. Omitted scorecard keys are not a recorded zero-sleep night.`
+    );
+  }
+  if (sleep === "failed") notes.push("Sleep request failed; treat sleep fields as unavailable.");
+  if (hrv === "failed") notes.push("HRV request failed; treat HRV fields as unavailable.");
+
+  return {
+    confidence: dailyMissing || sleep !== "present" || heartMissing ? "partial" : "high",
+    missing_or_failed: {
+      daily: dailyMissing,
+      sleep: sleep !== "present",
+      heart: heartMissing,
+      hrv: hrv !== "present",
+      stress: stats.has_stress_error || stats.stress_avg === undefined,
+      body_battery: stats.has_body_battery_error || (stats.body_battery_end === undefined && stats.body_battery_charged === undefined),
+      training_readiness: stats.has_training_readiness_error || stats.training_readiness_score === undefined
+    },
+    availability: { sleep, hrv },
+    notes
+  };
+}
+
 function primarySignal(readiness: string): string {
   if (readiness === "green_light") return "Recovery signals look supportive; use subjective state to choose how hard to push.";
   if (readiness === "readiness_limited") return "Training readiness is the limiting signal; reduce intensity before adding load.";
   if (readiness === "recovery_risk") return "Load, sleep and stress are misaligned; recovery discipline matters today.";
   if (readiness === "sleep_limited") return "Sleep is the highest-leverage constraint today.";
+  if (readiness === "overnight_metrics_pending") return "Overnight sleep/HRV are not attached to this Garmin calendar date yet; do not treat missing fields as a zero-sleep night.";
   if (readiness === "low_body_battery") return "Body Battery suggests pacing and stress reduction should come before extra intensity.";
   if (readiness === "high_load") return "Recent active load is high enough to justify recovery protection.";
   return "Use Garmin trends as practical readiness context, not as a diagnosis.";
