@@ -185,3 +185,12 @@ This software is provided as-is. It is not a medical device, does not provide me
 
 **Daily brief demo:** [docs/daily-brief-demo.md](docs/daily-brief-demo.md)
 
+## Skill or MCP
+
+Same package, two doors. MCP registers tools on stdio/HTTP. The [skill](skill/SKILL.md) can drive the **same** tools through the CLI when the client has no MCP:
+
+```bash
+npx -y garmin-mcp-unofficial call garmin_connection_status --json '{}'
+```
+
+Copy `skill/SKILL.md` into your agent skills dir.

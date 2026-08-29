@@ -4,12 +4,14 @@ import { parseAgentClientName } from "../services/agent-manifest.js";
 import { getOnboardingFlow, getProfilePath } from "../services/profile-store.js";
 import { runAuthCommand } from "./auth.js";
 import { runSetupCommand } from "./setup.js";
+import { runToolCall } from "./tool-calls.js";
 
 export async function runCliCommand(args: string[]): Promise<number | undefined> {
   const [command, ...rest] = args;
   if (!command || command === "--http") return undefined;
   if (command === "setup") return runSetupCommand(rest);
   if (command === "doctor" || command === "status") return runDoctor(rest);
+  if (command === "call") return runToolCall(rest);
   if (command === "auth") return runAuthCommand(rest);
   if (command === "onboarding") return runOnboarding(rest);
   if (command === "version" || command === "--version" || command === "-v") {

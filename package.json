@@ -1,6 +1,6 @@
 {
   "name": "garmin-mcp-unofficial",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Unofficial local-first Garmin MCP server for AI health, sleep and activity agents.",
   "type": "module",
   "bin": {
@@ -22,7 +22,8 @@
     "docs/*.xml",
     "docs/index.html",
     "examples",
-    "llms.txt"
+    "llms.txt",
+    "skill"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -30,7 +31,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "smoke": "node scripts/smoke-tools.mjs",
-    "test": "npm run typecheck && npm run build && npm run smoke && npm run smoke:http && npm run test:endpoint-contracts && npm run test:summary && npm run test:privacy-cache && npm run test:cli-ux && npm run test:native-auth && npm run test:agent-readiness && npm run test:hermes-agent && npm run test:metadata && npm run test:http-retry && npm run test:http-cache && npm run test:pagination && npm run test:activity-series && npm run test:demo-contract",
+    "test": "npm run typecheck && npm run build && npm run smoke && npm run smoke:http && npm run test:endpoint-contracts && npm run test:summary && npm run test:privacy-cache && npm run test:cli-ux && npm run test:native-auth && npm run test:agent-readiness && npm run test:hermes-agent && npm run test:metadata && npm run test:http-retry && npm run test:http-cache && npm run test:pagination && npm run test:activity-series && npm run test:demo-contract && npm run test:skill-surface",
     "test:summary": "node scripts/summary-fixture-test.mjs",
     "test:endpoint-contracts": "node scripts/endpoint-contract-test.mjs",
     "prepublishOnly": "npm test",
@@ -45,7 +46,8 @@
     "test:http-cache": "node scripts/http-cache-test.mjs",
     "test:pagination": "node scripts/pagination-next-page-test.mjs",
     "test:activity-series": "node scripts/activity-series-test.mjs",
-    "test:demo-contract": "node scripts/demo-contract-test.mjs"
+    "test:demo-contract": "node scripts/demo-contract-test.mjs",
+    "test:skill-surface": "node scripts/test-skill-surface.mjs"
   },
   "keywords": [
     "mcp",
