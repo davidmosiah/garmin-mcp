@@ -29,6 +29,8 @@ Prefer the legacy Python helper? Use `auth --use-python`, or `auth --install-hel
 If auth reports HTTP 429, Cloudflare, or a missing `responseStatus.type`, stop
 retrying and follow the [auth troubleshooting guide](auth.md#rate-limits-cloudflare-and-unknown-login-responses).
 
+Garmin China (garmin.cn) accounts: run `auth --cn` (or set `GARMIN_DOMAIN=garmin.cn` / `GARMIN_IS_CN=true`). See [auth.md](auth.md#garmin-china-garmincn).
+
 ## 3. Check readiness
 
 ```bash

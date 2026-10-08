@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { GARMIN_DEFAULT_TOKEN_RELATIVE_PATH, PINNED_NPM_PACKAGE } from "../constants.js";
 import type { PrivacyMode, GarminTokenSet } from "../types.js";
 import { HERMES_DIRECT_TOOLS, type AgentClientName } from "./agent-manifest.js";
+import { isGarminDomain, resolveGarminDomainWithSource, type GarminDomain, type GarminDomainSource } from "./garmin-region.js";
 import { loadConfigSources } from "./local-config.js";
 
 type Env = Record<string, string | undefined>;
@@ -37,6 +38,7 @@ export interface ConnectionStatus extends Record<string, unknown> {
     has_refresh_token?: boolean;
     has_di_token?: boolean;
     display_name?: string;
+    domain?: GarminDomain;
     scope?: string;
     error?: string;
   };
@@ -49,6 +51,7 @@ export interface ConnectionStatus extends Record<string, unknown> {
     profile_tools_ready: boolean;
   };
   cache: { enabled: boolean; path: string };
+  region: { domain: GarminDomain; source: GarminDomainSource; is_cn: boolean };
   client_checks?: { hermes?: HermesClientCheck };
   next_steps: string[];
 }
@@ -100,6 +103,12 @@ export async function buildConnectionStatus(options: ConnectionStatusOptions = {
     token,
     oauth: buildCompatibilityAuthStatus(token),
     cache: { enabled: parseBool(value("GARMIN_CACHE")), path: cachePath },
+    region: resolveGarminDomainWithSource({
+      envDomain: env.GARMIN_DOMAIN,
+      envIsCn: env.GARMIN_IS_CN,
+      localDomain: sources.local.values.GARMIN_DOMAIN,
+      tokenDomain: token.domain
+    }),
     client_checks: clientChecks,
     next_steps: buildNextSteps({ token, nodeSupported })
   };
@@ -132,6 +141,7 @@ async function inspectToken(path: string, nowSeconds: number): Promise<Connectio
       has_refresh_token: typeof token.di_refresh_token === "string" && token.di_refresh_token.length > 0,
       has_di_token: typeof token.di_token === "string" && token.di_token.length > 0,
       display_name: typeof token.display_name === "string" ? token.display_name : undefined,
+      domain: isGarminDomain(token.domain) ? token.domain : undefined,
       scope: "garmin-connect-personal"
     };
   } catch (error) {

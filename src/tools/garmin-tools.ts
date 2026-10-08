@@ -624,6 +624,8 @@ export function registerGarminTools(server: McpServer): void {
       has_di_token: status.token.has_di_token,
       has_refresh_token: status.token.has_refresh_token,
       privacy_mode: status.privacy_mode,
+      region: status.region.domain,
+      region_source: status.region.source,
       next_steps: status.next_steps.join(" | ")
     }));
   });

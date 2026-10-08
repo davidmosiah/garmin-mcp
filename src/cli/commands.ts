@@ -122,6 +122,11 @@ function safeDoctorStatus(status: Awaited<ReturnType<typeof buildConnectionStatu
     cache: raw.cache ? {
       enabled: Boolean(raw.cache.enabled)
     } : undefined,
+    region: raw.region ? {
+      domain: raw.region.domain,
+      source: raw.region.source,
+      is_cn: Boolean(raw.region.is_cn)
+    } : undefined,
     client_checks: safeHermes ? { hermes: safeHermes } : undefined,
     next_steps: raw.next_steps
   };
@@ -152,6 +157,7 @@ function printDoctor(status: Awaited<ReturnType<typeof buildConnectionStatus>>):
     if (status.token.display_name) line(info, "Garmin display name", "available");
   }
   line(info, "Privacy mode", status.privacy_mode);
+  line(info, `Garmin region (${status.region.domain})`);
   line(status.cache.enabled ? ok : info, "Cache", status.cache.enabled ? "enabled" : "disabled");
   if (status.client_checks?.hermes) {
     const hermes = status.client_checks.hermes;
@@ -186,6 +192,9 @@ Usage:
   garmin-mcp-server doctor --client hermes
   garmin-mcp-server auth            Log in to Garmin locally (no Python needed) and save ~/.garmin-mcp/garmin_tokens.json
   garmin-mcp-server auth --json     Non-interactive login using GARMIN_EMAIL / GARMIN_PASSWORD (+ GARMIN_MFA_CODE)
+  garmin-mcp-server auth --cn       Log in against garmin.cn (Garmin China accounts)
+  garmin-mcp-server auth --domain garmin.cn
+                                  Same as --cn; use garmin.com to force the international region
   garmin-mcp-server auth --use-python
                                   Use the legacy Python garminconnect helper instead of the built-in login
   garmin-mcp-server auth --install-helper
@@ -198,5 +207,7 @@ Optional env/config:
   GARMIN_TOKEN_PATH=~/.garmin-mcp/garmin_tokens.json
   GARMIN_PRIVACY_MODE=summary|structured|raw
   GARMIN_CACHE=sqlite
+  GARMIN_DOMAIN=garmin.com|garmin.cn
+  GARMIN_IS_CN=true                 alias of GARMIN_DOMAIN=garmin.cn
 `);
 }

@@ -46,7 +46,14 @@
         },
         {
           "name": "GARMIN_DOMAIN",
-          "description": "Optional Garmin domain override. Use garmin.cn only for China accounts; default is garmin.com.",
+          "description": "Optional Garmin domain override. Use garmin.cn only for China accounts; default is garmin.com. Overrides a domain stored with saved tokens.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "GARMIN_IS_CN",
+          "description": "Optional alias for China accounts. true selects garmin.cn; GARMIN_DOMAIN wins if both are set.",
           "isRequired": false,
           "format": "string",
           "isSecret": false

@@ -1,5 +1,11 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { URL, URLSearchParams } from "node:url";
+import {
+  DEFAULT_GARMIN_DOMAIN,
+  GARMIN_SSO_CLIENT_ID,
+  garminHosts,
+  type GarminDomain
+} from "../services/garmin-region.js";
 import type { GarminTokenSet } from "../types.js";
 
 /**
@@ -8,13 +14,12 @@ import type { GarminTokenSet } from "../types.js";
  * Ports the Garth / python-garminconnect SSO + OAuth flow so the CLI can mint
  * the same `~/.garmin-mcp/garmin_tokens.json` token set the runtime client
  * consumes — without requiring a separate Python helper. The token shape stays
- * identical (di_token / di_refresh_token / di_client_id) so the rest of the
- * connector and `doctor` keep working unchanged.
+ * identical (di_token / di_refresh_token / di_client_id, plus domain metadata)
+ * so the rest of the connector and `doctor` keep working unchanged.
  *
  * Reference: https://github.com/matin/garth (src/garth/sso.py)
  */
 
-const CLIENT_ID = "GCM_ANDROID_DARK";
 const OAUTH_CONSUMER_URL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json";
 const OAUTH_USER_AGENT = "com.garmin.android.apps.connectmobile";
 const SSO_PAGE_USER_AGENT =
@@ -29,7 +34,7 @@ const SSO_BLOCK_GUIDANCE =
 export interface GarminLoginInput {
   email: string;
   password: string;
-  domain?: "garmin.com" | "garmin.cn";
+  domain?: GarminDomain;
   /** Called when Garmin requires an MFA code. Return the user-entered code. */
   promptMfa?: () => Promise<string>;
 }
@@ -66,21 +71,19 @@ export async function nativeGarminLogin(
   input: GarminLoginInput,
   deps: NativeLoginDeps = {}
 ): Promise<GarminTokenSet> {
-  const domain = input.domain ?? "garmin.com";
+  const domain = input.domain ?? DEFAULT_GARMIN_DOMAIN;
+  const hosts = garminHosts(domain);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const jar = new CookieJar();
-  const ssoHost = `https://sso.${domain}`;
-  const connectApiHost = `https://connectapi.${domain}`;
-  const serviceUrl = `https://mobile.integration.${domain}/gcm/android`;
 
   // 1. Seed SSO cookies.
-  await ssoFetch(fetchImpl, jar, "GET", `${ssoHost}/sso/mobile/sso/en/sign-in?clientId=${CLIENT_ID}`, {
+  await ssoFetch(fetchImpl, jar, "GET", `${hosts.sso}/sso/mobile/sso/en/sign-in?clientId=${GARMIN_SSO_CLIENT_ID}`, {
     headers: { ...ssoPageHeaders(), "Sec-Fetch-Site": "none" }
   });
 
   // 2. Submit credentials.
-  const loginParams = new URLSearchParams({ clientId: CLIENT_ID, locale: "en-US", service: serviceUrl });
-  const loginResp = await ssoFetch(fetchImpl, jar, "POST", `${ssoHost}/sso/mobile/api/login?${loginParams.toString()}`, {
+  const loginParams = new URLSearchParams({ clientId: GARMIN_SSO_CLIENT_ID, locale: "en-US", service: hosts.mobileAndroidServiceUrl });
+  const loginResp = await ssoFetch(fetchImpl, jar, "POST", `${hosts.sso}/sso/mobile/api/login?${loginParams.toString()}`, {
     headers: { ...ssoPageHeaders(), "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ username: input.email, password: input.password, rememberMe: false, captchaToken: "" })
   });
@@ -98,7 +101,7 @@ export async function nativeGarminLogin(
     const mfaMethod = typeof mfaInfo.mfaLastMethodUsed === "string" ? mfaInfo.mfaLastMethodUsed : "email";
     const code = (await input.promptMfa()).trim();
     if (!code) throw new Error("Garmin MFA code was empty.");
-    const mfaResp = await ssoFetch(fetchImpl, jar, "POST", `${ssoHost}/sso/mobile/api/mfa/verifyCode?${loginParams.toString()}`, {
+    const mfaResp = await ssoFetch(fetchImpl, jar, "POST", `${hosts.sso}/sso/mobile/api/mfa/verifyCode?${loginParams.toString()}`, {
       headers: { ...ssoPageHeaders(), "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ mfaMethod, mfaVerificationCode: code, rememberMyBrowser: false, reconsentList: [], mfaSetup: false })
     });
@@ -113,18 +116,19 @@ export async function nativeGarminLogin(
 
   // 3. Exchange ticket → OAuth1 → OAuth2 (signed with the Garmin consumer key).
   const consumer = await (deps.getConsumer ?? (() => fetchConsumer(fetchImpl)))();
-  const oauth1 = await getOAuth1Token(fetchImpl, jar, consumer, ticket, connectApiHost, serviceUrl, domain);
-  const oauth2 = await exchangeOAuth2(fetchImpl, jar, consumer, oauth1, connectApiHost, domain);
+  const oauth1 = await getOAuth1Token(fetchImpl, jar, consumer, ticket, hosts.connectApi, hosts.mobileAndroidServiceUrl);
+  const oauth2 = await exchangeOAuth2(fetchImpl, jar, consumer, oauth1, hosts.connectApi);
 
-  return tokenSetFromOAuth2(oauth2);
+  return tokenSetFromOAuth2(oauth2, domain);
 }
 
-export function tokenSetFromOAuth2(oauth2: OAuth2Response): GarminTokenSet {
+export function tokenSetFromOAuth2(oauth2: OAuth2Response, domain: GarminDomain = DEFAULT_GARMIN_DOMAIN): GarminTokenSet {
   const now = new Date().toISOString();
   return {
     di_token: oauth2.access_token,
     di_refresh_token: oauth2.refresh_token,
     di_client_id: extractClientIdFromJwt(oauth2.access_token),
+    domain,
     created_at: now,
     updated_at: now
   };
@@ -136,8 +140,7 @@ async function getOAuth1Token(
   consumer: OAuthConsumer,
   ticket: string,
   connectApiHost: string,
-  serviceUrl: string,
-  domain: string
+  serviceUrl: string
 ): Promise<OAuth1Token> {
   const url =
     `${connectApiHost}/oauth-service/oauth/preauthorized` +
@@ -156,7 +159,6 @@ async function getOAuth1Token(
   if (!parsed.oauth_token || !parsed.oauth_token_secret) {
     throw new Error("Garmin OAuth1 response did not contain oauth_token/oauth_token_secret.");
   }
-  void domain;
   return { oauth_token: parsed.oauth_token, oauth_token_secret: parsed.oauth_token_secret, mfa_token: parsed.mfa_token };
 }
 
@@ -165,8 +167,7 @@ async function exchangeOAuth2(
   jar: CookieJar,
   consumer: OAuthConsumer,
   oauth1: OAuth1Token,
-  connectApiHost: string,
-  domain: string
+  connectApiHost: string
 ): Promise<OAuth2Response> {
   const url = `${connectApiHost}/oauth-service/oauth/exchange/user/2.0`;
   const form: Record<string, string> = { audience: "GARMIN_CONNECT_MOBILE_ANDROID_DI" };
@@ -195,7 +196,6 @@ async function exchangeOAuth2(
   if (typeof json.access_token !== "string" || typeof json.refresh_token !== "string") {
     throw new Error("Garmin OAuth2 exchange response was missing access_token/refresh_token.");
   }
-  void domain;
   return json as unknown as OAuth2Response;
 }
 

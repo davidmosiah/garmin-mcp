@@ -37,6 +37,9 @@ Usage:
   garmin-mcp-server doctor --client hermes
   garmin-mcp-server auth            Log in to Garmin locally (no Python needed) and save ~/.garmin-mcp/garmin_tokens.json
   garmin-mcp-server auth --json     Non-interactive login using GARMIN_EMAIL / GARMIN_PASSWORD (+ GARMIN_MFA_CODE)
+  garmin-mcp-server auth --cn       Log in against garmin.cn (Garmin China accounts)
+  garmin-mcp-server auth --domain garmin.cn
+                                  Same as --cn; use garmin.com to force the international region
   garmin-mcp-server auth --use-python
                                   Use the legacy Python garminconnect helper instead of the built-in login
   garmin-mcp-server auth --install-helper
@@ -49,6 +52,8 @@ Optional env/config:
   GARMIN_TOKEN_PATH=~/.garmin-mcp/garmin_tokens.json
   GARMIN_PRIVACY_MODE=summary|structured|raw
   GARMIN_CACHE=sqlite
+  GARMIN_DOMAIN=garmin.com|garmin.cn
+  GARMIN_IS_CN=true                 alias of GARMIN_DOMAIN=garmin.cn
 ```
 
 ## Interactive login
@@ -122,6 +127,7 @@ Checks
   ✓  DI token
   ✓  DI refresh token
   ·  Privacy mode
+  ·  Garmin region (garmin.com)
   ·  Cache
 
 Next steps
@@ -148,6 +154,7 @@ Next steps
     "has_di_token": true
   },
   "cache": { "enabled": false },
+  "region": { "domain": "garmin.com", "source": "default", "is_cn": false },
   "next_steps": [
     "Ready. Add this MCP server to your agent and start with garmin_daily_summary."
   ]
