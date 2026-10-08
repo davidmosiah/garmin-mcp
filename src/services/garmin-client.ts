@@ -1,7 +1,8 @@
 import { URL, URLSearchParams } from "node:url";
-import { DEFAULT_LIMIT, GARMIN_CONNECT_API_BASE_URL, GARMIN_DI_TOKEN_URL, MAX_GARMIN_LIMIT } from "../constants.js";
+import { DEFAULT_LIMIT, MAX_GARMIN_LIMIT } from "../constants.js";
 import type { GarminConfig, GarminTokenSet } from "../types.js";
 import { disabledCacheStatus, GarminCache, type CacheStatus } from "./cache.js";
+import { garminHosts, resolveGarminDomain, type GarminHosts } from "./garmin-region.js";
 import { fetchWithCache, getCacheStats } from "./http-cache.js";
 import { fetchWithRetry as fetchWithRetryMiddleware } from "./http-retry.js";
 import { redactErrorMessage } from "./redaction.js";
@@ -111,7 +112,7 @@ export class GarminClient {
 
   private async request(method: "GET" | "POST", path: string, body?: Record<string, string | number | boolean | undefined>, params?: Record<string, string | number | boolean | undefined>): Promise<unknown> {
     const token = await this.getValidToken();
-    const url = this.buildUrl(path, params);
+    const url = this.buildUrl(path, params, this.hostsFor(token));
     const response = await this.fetchWithRetry(url, {
       method,
       headers: this.jsonHeaders(token),
@@ -120,21 +121,25 @@ export class GarminClient {
 
     if (response.status === 401 && token.di_refresh_token && token.di_client_id) {
       const refreshed = await this.refreshToken(true);
-      const retry = await this.fetchWithRetry(url, {
+      const retryUrl = this.buildUrl(path, params, this.hostsFor(refreshed));
+      const retry = await this.fetchWithRetry(retryUrl, {
         method,
         headers: this.jsonHeaders(refreshed),
         body: body ? JSON.stringify(cleanParams(body)) : undefined
       });
-      return this.parseAndCache(method, url, retry);
+      return this.parseAndCache(method, retryUrl, retry);
     }
 
     return this.parseAndCache(method, url, response);
   }
 
-  private buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
+  private hostsFor(tokens?: GarminTokenSet | null): GarminHosts {
+    return garminHosts(resolveGarminDomain({ explicit: this.config.domain, tokenDomain: tokens?.domain }).domain);
+  }
+
+  private buildUrl(path: string, params: Record<string, string | number | boolean | undefined> | undefined, hosts: GarminHosts): string {
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    const host = this.config.domain === "garmin.cn" ? "https://connectapi.garmin.cn" : GARMIN_CONNECT_API_BASE_URL;
-    const url = new URL(`${host}${cleanPath}`);
+    const url = new URL(`${hosts.connectApi}${cleanPath}`);
     for (const [key, value] of Object.entries(params ?? {})) {
       if (value === undefined || value === null || value === "") continue;
       url.searchParams.set(key, String(value));
@@ -166,7 +171,8 @@ export class GarminClient {
         client_id: current.di_client_id,
         refresh_token: current.di_refresh_token
       });
-      const response = await this.fetchWithRetry(GARMIN_DI_TOKEN_URL, {
+      const hosts = this.hostsFor(current);
+      const response = await this.fetchWithRetry(hosts.diTokenUrl, {
         method: "POST",
         headers: this.formHeaders(current.di_client_id),
         body: body.toString()
@@ -177,6 +183,7 @@ export class GarminClient {
         di_token: String(data.access_token ?? current.di_token ?? ""),
         di_refresh_token: typeof data.refresh_token === "string" ? data.refresh_token : current.di_refresh_token,
         di_client_id: extractClientIdFromJwt(String(data.access_token ?? "")) ?? current.di_client_id,
+        domain: current.domain ?? this.config.domain,
         updated_at: new Date().toISOString()
       };
       await this.tokenStore.write(refreshed);
@@ -199,10 +206,11 @@ export class GarminClient {
     };
     if (tokens.di_token) headers.Authorization = `Bearer ${tokens.di_token}`;
     if (tokens.jwt_web) {
+      const hosts = this.hostsFor(tokens);
       headers.Cookie = `JWT_WEB=${tokens.jwt_web}`;
-      headers.Origin = "https://connect.garmin.com";
-      headers.Referer = "https://connect.garmin.com/modern/";
-      headers["DI-Backend"] = "connectapi.garmin.com";
+      headers.Origin = hosts.connect;
+      headers.Referer = hosts.connectModernUrl;
+      headers["DI-Backend"] = hosts.diBackend;
       if (tokens.csrf_token) headers["connect-csrf-token"] = tokens.csrf_token;
     }
     return headers;

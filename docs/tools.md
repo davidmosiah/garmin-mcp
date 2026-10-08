@@ -117,7 +117,10 @@ GARMIN_PRIVACY_MODE=summary                  # summary | structured | raw
 GARMIN_CACHE=sqlite                          # optional read-through cache
 GARMIN_CACHE_PATH=~/.garmin-mcp/cache.sqlite
 GARMIN_DOMAIN=garmin.com                     # or garmin.cn for China accounts
+GARMIN_IS_CN=true                            # alias of GARMIN_DOMAIN=garmin.cn
 ```
+
+Region precedence: `GARMIN_DOMAIN` / `GARMIN_IS_CN` env (env wins over the alias) → `~/.garmin-mcp/config.json` `GARMIN_DOMAIN` → `domain` stored with tokens → default `garmin.com`. `auth --cn` / `auth --domain garmin.cn` select China for that login and persist `domain` in the token file. `doctor` and `garmin_connection_status` report the active region.
 
 ## Hermes / remote setup
 

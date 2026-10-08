@@ -50,6 +50,19 @@ GARMIN_EMAIL=you@example.com GARMIN_PASSWORD='…' npx -y garmin-mcp-unofficial 
 
 If Garmin requires MFA, also set `GARMIN_MFA_CODE`. The `--json` mode never prompts; it fails cleanly when credentials are missing.
 
+## Garmin China (garmin.cn)
+
+China-app accounts authenticate against `garmin.cn`. Use any of:
+
+```bash
+npx -y garmin-mcp-unofficial auth --cn
+npx -y garmin-mcp-unofficial auth --domain garmin.cn
+GARMIN_DOMAIN=garmin.cn npx -y garmin-mcp-unofficial auth
+GARMIN_IS_CN=true npx -y garmin-mcp-unofficial auth --json
+```
+
+`GARMIN_DOMAIN` wins over `GARMIN_IS_CN` when both are set. The selected domain is written into the token file so later refresh hits `diauth.garmin.cn` even if the env var is missing; setting `GARMIN_DOMAIN` later still overrides. Default remains `garmin.com`. The legacy Python helper (`auth --use-python`) passes `is_cn=True` when the China region is selected.
+
 ## Legacy Python helper (optional)
 
 The previous Python-based flow is still available if you prefer it:

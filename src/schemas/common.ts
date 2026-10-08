@@ -302,7 +302,7 @@ export const ConnectionStatusOutputSchema = z.object({
   redirect_uri: z.string().optional(),
   automatic_auth_supported: z.boolean(),
   config: z.object({ source: z.enum(["env", "local_config", "mixed", "missing"]), path: z.string(), exists: z.boolean(), secure_permissions: z.boolean().optional(), error: z.string().optional() }).strict(),
-  token: z.object({ path: z.string(), exists: z.boolean(), readable: z.boolean(), permissions: z.string().optional(), secure_permissions: z.boolean().optional(), expires_at: z.number().optional(), expired: z.boolean().optional(), has_refresh_token: z.boolean().optional(), has_di_token: z.boolean().optional(), display_name: z.string().optional(), scope: z.string().optional(), error: z.string().optional() }).strict(),
+  token: z.object({ path: z.string(), exists: z.boolean(), readable: z.boolean(), permissions: z.string().optional(), secure_permissions: z.boolean().optional(), expires_at: z.number().optional(), expired: z.boolean().optional(), has_refresh_token: z.boolean().optional(), has_di_token: z.boolean().optional(), display_name: z.string().optional(), domain: z.enum(["garmin.com", "garmin.cn"]).optional(), scope: z.string().optional(), error: z.string().optional() }).strict(),
   oauth: z.object({
     recommended_scopes: z.array(z.string()),
     granted_scopes: z.array(z.string()),
@@ -312,6 +312,7 @@ export const ConnectionStatusOutputSchema = z.object({
     profile_tools_ready: z.boolean()
   }).strict(),
   cache: z.object({ enabled: z.boolean(), path: z.string() }).strict(),
+  region: z.object({ domain: z.enum(["garmin.com", "garmin.cn"]), source: z.enum(["env", "local_config", "cli", "token", "default"]), is_cn: z.boolean() }).strict(),
   client_checks: z.object({
     hermes: z.object({
       config_path: z.string(),

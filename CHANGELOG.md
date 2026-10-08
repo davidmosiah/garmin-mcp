@@ -1,3 +1,9 @@
+## Unreleased
+
+### Added
+
+- **Garmin China (`garmin.cn`) region support.** Login, DI token refresh and Connect API calls now derive hosts from a single region helper instead of hardcoding `garmin.com`. Set `GARMIN_DOMAIN=garmin.cn` or `GARMIN_IS_CN=true`, or pass `auth --cn` / `auth --domain garmin.cn`. The minted region is stored next to tokens so refresh stays on `diauth.garmin.cn` when the env var is later unset; env still overrides. `doctor` / `garmin_connection_status` report the active region. Default remains `garmin.com`. Host templates match python-garminconnect (`ALLOWED_DOMAINS`, `sso` / `connect` / `connectapi` / `diauth.{domain}`) and garth.
+
 ## 0.7.6 - 2026-08-29
 
 Skill layer ships in-package (`skill/SKILL.md`). Agents can use MCP tools **or** `call <tool> --json` on the same binary; mutation gates stay identical.

@@ -58,6 +58,7 @@ const CONSUMER = { consumer_key: 'fake-consumer-key', consumer_secret: 'fake-con
   assert.equal(set.di_client_id, 'android-client');
   assert.ok(set.di_token);
   assert.ok(set.created_at);
+  assert.equal(set.domain, 'garmin.com');
 }
 
 // ---- 3. Full login happy path against a mocked Garmin (no real account) ------
@@ -115,6 +116,8 @@ function mockFetch(spec) {
   const exchange = calls.find((c) => c.url.includes('exchange/user/2.0'));
   assert.match(exchange.headers.Authorization, /oauth_token="ot-xyz"/);
   assert.ok(String(exchange.body).includes('audience=GARMIN_CONNECT_MOBILE_ANDROID_DI'));
+  assert.ok(calls.every((c) => c.url.includes('garmin.com')));
+  assert.equal(tokens.domain, 'garmin.com');
 }
 
 // ---- 4. MFA path prompts and completes ---------------------------------------

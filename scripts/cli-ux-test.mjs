@@ -41,6 +41,9 @@ try {
   assert.equal(ready.token.has_refresh_token, true);
   assert.equal(ready.token.has_di_token, true);
   assert.equal(ready.oauth.scope_status, 'ok');
+  assert.equal(missing.region.domain, 'garmin.com');
+  assert.equal(missing.region.source, 'default');
+  assert.equal(ready.region.domain, 'garmin.com');
 
   const doctor = spawnSync(process.execPath, ['dist/index.js', 'doctor', '--json'], {
     encoding: 'utf8',
@@ -52,6 +55,9 @@ try {
   assert.equal(doctor.status, 0, doctor.stderr);
   const doctorPayload = JSON.parse(doctor.stdout);
   assert.equal(doctorPayload.ok, false);
+  assert.equal(doctorPayload.region.domain, 'garmin.com');
+  assert.equal(doctorPayload.region.source, 'default');
+  assert.equal(doctorPayload.region.is_cn, false);
   assert.ok(doctorPayload.next_steps.some((step) => step.includes('garmin-mcp-server auth')));
 
   const typo = spawnSync(process.execPath, ['dist/index.js', 'docter'], {

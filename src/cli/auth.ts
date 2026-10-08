@@ -5,6 +5,11 @@ import { spawnSync } from "node:child_process";
 import { createInterface as createPromptInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { getConfig } from "../services/config.js";
+import {
+  DEFAULT_GARMIN_DOMAIN,
+  parseExplicitGarminDomain,
+  type GarminDomain
+} from "../services/garmin-region.js";
 import { TokenStore } from "../services/token-store.js";
 import { nativeGarminLogin } from "./garmin-login.js";
 
@@ -25,8 +30,34 @@ export async function runAuthCommand(args: string[]): Promise<number> {
  * connector reads, matching how the other Delx wellness connectors store tokens
  * locally (~/.garmin-mcp/garmin_tokens.json, 0600).
  */
+export function parseAuthRegionFlags(args: string[]): GarminDomain | undefined {
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === "--domain") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) throw new Error("Missing value for --domain. Use garmin.com or garmin.cn.");
+      const normalized = value.trim().toLowerCase();
+      if (normalized !== "garmin.com" && normalized !== "garmin.cn" && normalized !== "cn") {
+        throw new Error("Garmin --domain must be garmin.com or garmin.cn.");
+      }
+      return normalized === "garmin.cn" || normalized === "cn" ? "garmin.cn" : "garmin.com";
+    }
+  }
+  if (args.includes("--cn")) return "garmin.cn";
+  return undefined;
+}
+
+function resolveAuthDomain(args: string[]): GarminDomain {
+  return parseAuthRegionFlags(args) ?? getConfig().domain ?? DEFAULT_GARMIN_DOMAIN;
+}
+
 async function runNativeAuth(args: string[], json: boolean): Promise<number> {
   const config = getConfig();
+  let domain: GarminDomain;
+  try {
+    domain = resolveAuthDomain(args);
+  } catch (error) {
+    return printAuthFailure(json, (error as Error).message);
+  }
   let credentials: { email: string; password: string };
   try {
     credentials = await collectCredentials(json);
@@ -38,13 +69,13 @@ async function runNativeAuth(args: string[], json: boolean): Promise<number> {
     const tokens = await nativeGarminLogin({
       email: credentials.email,
       password: credentials.password,
-      domain: config.domain,
+      domain,
       promptMfa: json ? promptMfaFromEnv : promptMfaInteractive
     });
     const store = new TokenStore(config.tokenPath);
     await store.withLock(async () => {
       const existing = (await store.read()) ?? {};
-      await store.write({ ...existing, ...tokens, updated_at: new Date().toISOString() });
+      await store.write({ ...existing, ...tokens, domain, updated_at: new Date().toISOString() });
     });
     chmodSync(config.tokenPath, 0o600);
     return printAuthSuccess(json, config.tokenPath);
@@ -112,6 +143,12 @@ async function runPythonAuth(args: string[], json: boolean): Promise<number> {
   // expects it to already be present.
   const installHelper = args.includes("--install-helper");
   const config = getConfig();
+  let domain: GarminDomain;
+  try {
+    domain = resolveAuthDomain(args);
+  } catch (error) {
+    return printAuthFailure(json, (error as Error).message);
+  }
 
   const basePython = findPython();
   if (!basePython) {
@@ -130,7 +167,8 @@ async function runPythonAuth(args: string[], json: boolean): Promise<number> {
     stdio: json ? "pipe" : "inherit",
     env: {
       ...process.env,
-      GARMIN_MCP_TOKEN_PATH: config.tokenPath
+      GARMIN_MCP_TOKEN_PATH: config.tokenPath,
+      GARMIN_DOMAIN: domain
     }
   });
 
@@ -269,7 +307,10 @@ def main():
     if not email or not password:
         raise SystemExit("Garmin email and password are required.")
 
-    api = Garmin(email, password, prompt_mfa=prompt_mfa)
+    domain = (os.environ.get("GARMIN_DOMAIN") or "").strip().lower()
+    is_cn_raw = (os.environ.get("GARMIN_IS_CN") or "").strip().lower()
+    is_cn = domain in ("garmin.cn", "cn") or is_cn_raw in ("1", "true", "yes", "on")
+    api = Garmin(email, password, is_cn=is_cn, prompt_mfa=prompt_mfa)
     api.login(str(token_path))
 
     data = {}
@@ -278,6 +319,7 @@ def main():
     data["display_name"] = getattr(api, "display_name", None)
     data["full_name"] = getattr(api, "full_name", None)
     data["unit_system"] = getattr(api, "unit_system", None)
+    data["domain"] = "garmin.cn" if is_cn else "garmin.com"
     data["updated_at"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
     token_path.write_text(json.dumps(data, indent=2) + "\n")
     token_path.chmod(0o600)

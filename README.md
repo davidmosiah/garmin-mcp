@@ -84,6 +84,17 @@ Or one shot: `npx -y garmin-mcp-unofficial setup --auth`
 
 If Garmin returns HTTP 429, a Cloudflare challenge, or an auth message that says Garmin SSO omitted `responseStatus.type`, **stop retrying for a while**. Repeated headless login attempts can make the private endpoint throttle harder. Use [docs/auth.md](docs/auth.md#rate-limits-cloudflare-and-unknown-login-responses) for the safe recovery path.
 
+## Garmin China (garmin.cn) accounts
+
+Garmin China app accounts live on `garmin.cn`, not `garmin.com`. International login, token refresh and Connect API calls will not work for those accounts.
+
+```bash
+npx -y garmin-mcp-unofficial auth --cn
+# or: GARMIN_DOMAIN=garmin.cn   (GARMIN_IS_CN=true is an alias)
+```
+
+The region is stored in `~/.garmin-mcp/garmin_tokens.json` (metadata only — tokens are never printed). Env vars still override a stored region. `doctor` / `garmin_connection_status` show which domain is active. SSO client id stays `GCM_ANDROID_DARK` for both regions; only hostnames change (`sso.garmin.cn`, `connectapi.garmin.cn`, `diauth.garmin.cn`, …), matching python-garminconnect `is_cn=True` / garth `domain="garmin.cn"`.
+
 Then add this to your MCP client config:
 
 ```json
