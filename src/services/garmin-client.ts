@@ -125,10 +125,11 @@ export class GarminClient {
         headers: this.jsonHeaders(refreshed),
         body: body ? JSON.stringify(cleanParams(body)) : undefined
       });
-      return this.parseAndCache(method, url, retry);
+      return this.parseResponse(retry);
     }
 
-    return this.parseAndCache(method, url, response);
+    // Authenticated payloads must not use a persistent cache keyed only by method and URL.
+    return this.parseResponse(response);
   }
 
   private buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
@@ -228,20 +229,6 @@ export class GarminClient {
       throw new Error(`Garmin Connect API HTTP ${response.status}: ${redactErrorMessage(details || response.statusText)}`);
     }
     return payload ?? {};
-  }
-
-  private async parseAndCache(method: "GET" | "POST", url: string, response: Response): Promise<unknown> {
-    try {
-      const payload = await this.parseResponse(response);
-      if (this.config.cacheEnabled && method === "GET") this.getCache().set(method, url, payload);
-      return payload;
-    } catch (error) {
-      if (this.config.cacheEnabled && method === "GET") {
-        const cached = this.getCache().get(method, url);
-        if (cached !== undefined) return cached;
-      }
-      throw error;
-    }
   }
 
   private getCache(): GarminCache {
