@@ -2,6 +2,7 @@
 
 ### Security
 
+- Authenticated Garmin responses are no longer stored in or served from the HTTP or SQLite cache, which was keyed only by method and URL and could return one account's data to another. `GARMIN_CACHE` is still accepted but has no effect, and cache status, connection status and the privacy audit now report the cache as off. Delete `~/.garmin-mcp/cache.sqlite` to remove entries written by earlier versions.
 - Raise transitive npm overrides so Dependabot grouped security updates can resolve: `qs@6.16.0`, `hono@4.13.7`, `fast-uri@3.1.8`, `ip-address@10.7.1`. Stale pins (`qs@6.15.2`, `hono@4.13.1`, `fast-uri@3.1.5`, `ip-address@10.4.0`) made the npm security job fail with `security_update_not_possible` from 2026-09-08.
 
 ## 0.7.6 - 2026-08-29

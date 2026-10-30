@@ -1,7 +1,7 @@
 import { URL, URLSearchParams } from "node:url";
 import { DEFAULT_LIMIT, GARMIN_CONNECT_API_BASE_URL, GARMIN_DI_TOKEN_URL, MAX_GARMIN_LIMIT } from "../constants.js";
 import type { GarminConfig, GarminTokenSet } from "../types.js";
-import { disabledCacheStatus, GarminCache, type CacheStatus } from "./cache.js";
+import { disabledCacheStatus, type CacheStatus } from "./cache.js";
 import { fetchWithCache, getCacheStats } from "./http-cache.js";
 import { fetchWithRetry as fetchWithRetryMiddleware } from "./http-retry.js";
 import { redactErrorMessage } from "./redaction.js";
@@ -22,7 +22,6 @@ const NATIVE_X_GARMIN_USER_AGENT = "com.garmin.android.apps.connectmobile/5.23; 
 
 export class GarminClient {
   private readonly tokenStore: TokenStore;
-  private cache?: GarminCache;
 
   constructor(private readonly config: GarminConfig) {
     this.tokenStore = new TokenStore(config.tokenPath);
@@ -100,8 +99,8 @@ export class GarminClient {
       default_ttl_seconds: 60,
       bypass_env_var: "GARMIN_NO_CACHE"
     };
-    if (!this.config.cacheEnabled) return { ...disabledCacheStatus(this.config.cachePath), http_cache };
-    return { ...this.getCache().status(), http_cache };
+    // Authenticated responses are never cached, so the SQLite cache stays off even when configured.
+    return { ...disabledCacheStatus(this.config.cachePath), http_cache };
   }
 
   async clearLocalTokens(): Promise<{ ok: true; token_path: string; local_tokens_cleared: boolean }> {
@@ -125,10 +124,11 @@ export class GarminClient {
         headers: this.jsonHeaders(refreshed),
         body: body ? JSON.stringify(cleanParams(body)) : undefined
       });
-      return this.parseAndCache(method, url, retry);
+      return this.parseResponse(retry);
     }
 
-    return this.parseAndCache(method, url, response);
+    // Authenticated payloads must not use a persistent cache keyed only by method and URL.
+    return this.parseResponse(response);
   }
 
   private buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
@@ -228,25 +228,6 @@ export class GarminClient {
       throw new Error(`Garmin Connect API HTTP ${response.status}: ${redactErrorMessage(details || response.statusText)}`);
     }
     return payload ?? {};
-  }
-
-  private async parseAndCache(method: "GET" | "POST", url: string, response: Response): Promise<unknown> {
-    try {
-      const payload = await this.parseResponse(response);
-      if (this.config.cacheEnabled && method === "GET") this.getCache().set(method, url, payload);
-      return payload;
-    } catch (error) {
-      if (this.config.cacheEnabled && method === "GET") {
-        const cached = this.getCache().get(method, url);
-        if (cached !== undefined) return cached;
-      }
-      throw error;
-    }
-  }
-
-  private getCache(): GarminCache {
-    this.cache ??= new GarminCache(this.config.cachePath);
-    return this.cache;
   }
 
   private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
