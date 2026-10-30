@@ -10,10 +10,6 @@ function parsePrivacyMode(value: string | undefined): PrivacyMode {
   return "structured";
 }
 
-function parseBool(value: string | undefined): boolean {
-  return Boolean(value && ["1", "true", "yes", "on", "sqlite"].includes(value.toLowerCase()));
-}
-
 export function buildPrivacyAudit(): Record<string, unknown> {
   const sources = loadConfigSources();
   const value = (name: keyof typeof sources.values) => sources.values[name];
@@ -27,7 +23,7 @@ export function buildPrivacyAudit(): Record<string, unknown> {
     privacy_mode_default: parsePrivacyMode(value("GARMIN_PRIVACY_MODE")),
     raw_payloads_opt_in: true,
     gps_redaction_default: true,
-    cache_enabled: parseBool(value("GARMIN_CACHE")),
+    cache_enabled: false,
     cache_path: value("GARMIN_CACHE_PATH") ?? join(homedir(), ".garmin-mcp", "cache.sqlite"),
     token_path: value("GARMIN_TOKEN_PATH") ?? join(homedir(), GARMIN_DEFAULT_TOKEN_RELATIVE_PATH),
     stdout_safe: true,
@@ -35,6 +31,7 @@ export function buildPrivacyAudit(): Record<string, unknown> {
     required_env_present: {},
     redacted_key_patterns: REDACTED_KEY_PATTERNS,
     notes: [
+      "Authenticated Garmin responses are never cached; GARMIN_CACHE is accepted but has no effect.",
       "This is an unofficial Garmin Connect personal integration, not Garmin Health API partnership access.",
       "Garmin password is used only by the local auth helper when provided interactively or via env and is not stored by this MCP.",
       "Garmin Connect tokens are stored locally and are not returned by tools.",

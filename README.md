@@ -126,7 +126,7 @@ See **[docs/tools.md](docs/tools.md)** for the full tool list, prompts, resource
 - In `structured` mode, normalized aliases are additive: complete upstream Garmin fields and nested DTOs remain available after secret/GPS redaction.
 - Activity date ranges preserve the supplied calendar date and reject invalid values before contacting Garmin Connect.
 - Garmin Connect tokens are stored at `~/.garmin-mcp/garmin_tokens.json` with user-only permissions and are never returned by tools. **Your Garmin password is never stored** — only short-lived tokens persist locally.
-- The MCP client never sees Garmin credentials or tokens. Local cache is opt-in via `GARMIN_CACHE=sqlite`.
+- The MCP client never sees Garmin credentials or tokens. Authenticated Garmin responses are never cached; `GARMIN_CACHE` has no effect.
 - This is **not medical advice**. The server exposes user-authorized data for personal AI workflows, not diagnosis or treatment.
 
 See [docs/privacy.md](docs/privacy.md) for the full privacy model.
