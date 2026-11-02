@@ -1,3 +1,5 @@
+> Upgrading to 0.8.0: read the [migration guide](docs/migration-0.8.0.md) for local-only HTTP, disabled authenticated-response caching, and stricter input/profile limits.
+
 <!-- delx-wellness header v2 -->
 <h1 align="center">Garmin MCP</h1>
 
