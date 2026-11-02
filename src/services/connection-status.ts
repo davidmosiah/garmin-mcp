@@ -99,7 +99,7 @@ export async function buildConnectionStatus(options: ConnectionStatusOptions = {
     },
     token,
     oauth: buildCompatibilityAuthStatus(token),
-    cache: { enabled: parseBool(value("GARMIN_CACHE")), path: cachePath },
+    cache: { enabled: false, path: cachePath },
     client_checks: clientChecks,
     next_steps: buildNextSteps({ token, nodeSupported })
   };
@@ -108,10 +108,6 @@ export async function buildConnectionStatus(options: ConnectionStatusOptions = {
 function parsePrivacyMode(value: string | undefined): PrivacyMode {
   if (value === "summary" || value === "structured" || value === "raw") return value;
   return "structured";
-}
-
-function parseBool(value: string | undefined): boolean {
-  return Boolean(value && ["1", "true", "yes", "on", "sqlite"].includes(value.toLowerCase()));
 }
 
 async function inspectToken(path: string, nowSeconds: number): Promise<ConnectionStatus["token"]> {

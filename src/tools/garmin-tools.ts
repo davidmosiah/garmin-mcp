@@ -630,7 +630,7 @@ export function registerGarminTools(server: McpServer): void {
 
   server.registerTool("garmin_cache_status", {
     title: "Garmin Cache Status",
-    description: "Show optional local SQLite cache status. Enable with GARMIN_CACHE=sqlite or GARMIN_CACHE=true.",
+    description: "Show local cache status. Authenticated Garmin responses are never cached, so GARMIN_CACHE has no effect and the SQLite cache stays off.",
     inputSchema: ResponseOnlyInputSchema.shape,
     outputSchema: CacheStatusOutputSchema.shape,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
