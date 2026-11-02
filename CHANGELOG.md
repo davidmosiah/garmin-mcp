@@ -1,14 +1,11 @@
-## Unreleased security hardening
+## 0.8.0 - 2026-11-02
 
-- Update the MCP SDK, Zod and pinned transitive dependencies to patched versions; regenerate the npm lockfile without install scripts.
-- Limit tool arguments to 10,000 elements across both transports and reject compressed HTTP bodies; retain the 1 MiB JSON limit. Add synthetic regression coverage.
+### Security and compatibility
 
-## Unreleased
-
-### Security
-
-- Authenticated Garmin responses are no longer stored in or served from the HTTP or SQLite cache, which was keyed only by method and URL and could return one account's data to another. `GARMIN_CACHE` is still accepted but has no effect, and cache status, connection status and the privacy audit now report the cache as off. Delete `~/.garmin-mcp/cache.sqlite` to remove entries written by earlier versions.
-- Raise transitive npm overrides so Dependabot grouped security updates can resolve: `qs@6.16.0`, `hono@4.13.7`, `fast-uri@3.1.8`, `ip-address@10.7.1`. Stale pins (`qs@6.15.2`, `hono@4.13.1`, `fast-uri@3.1.5`, `ip-address@10.4.0`) made the npm security job fail with `security_update_not_possible` from 2026-09-08.
+- Release the main-branch hardening for authenticated-response cache isolation, local-only HTTP, profile validation, 256 KiB profile storage limits, cooperative writer locking and symlink rejection.
+- Bound tool input collections to 10,000 elements and reject compressed HTTP JSON bodies; preserve endpoint-specific limits.
+- Align package, lockfile, server manifest and runtime versions. Extend the existing CI matrix to Node.js 20/22/24 without changing workflow permissions.
+- These security restrictions can reject previously accepted configuration or input, so this is a pre-1.0 minor release. See [migration notes](docs/migration-0.8.0.md).
 
 ## 0.7.6 - 2026-08-29
 
