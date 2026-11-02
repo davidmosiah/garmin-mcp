@@ -1,3 +1,8 @@
+## Unreleased security hardening
+
+- Update the MCP SDK, Zod and pinned transitive dependencies to patched versions; regenerate the npm lockfile without install scripts.
+- Limit tool arguments to 10,000 elements across both transports and reject compressed HTTP bodies; retain the 1 MiB JSON limit. Add synthetic regression coverage.
+
 ## Unreleased
 
 ### Security
