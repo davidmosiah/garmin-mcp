@@ -6,7 +6,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "garmin-mcp-unofficial@0.7.6"
+        "garmin-mcp-unofficial@0.8.0"
       ],
       "cwd": "${PLUGIN_DATA}"
     }

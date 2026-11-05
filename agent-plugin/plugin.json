@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "garmin-mcp",
-  "version": "0.7.6",
+  "version": "0.8.0",
   "description": "Read the user's Garmin Body Battery, HRV status, sleep, stress, training readiness and activities through the local garmin MCP server.",
   "author": {
     "name": "David Mosiah",

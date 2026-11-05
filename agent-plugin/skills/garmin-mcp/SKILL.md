@@ -6,7 +6,7 @@ description: >-
 
 # Garmin
 
-MCP server `garmin` from the `garmin-mcp-unofficial@0.7.6` npm package, run locally through `npx`. It reads Body Battery, HRV status, sleep, stress, training readiness and status, activities. Data source: Garmin Connect in unofficial personal mode (Garmin has no public consumer API): the user logs in locally once and the connector reuses the resulting Garmin Connect tokens.
+MCP server `garmin` from the `garmin-mcp-unofficial@0.8.0` npm package, run locally through `npx`. It reads Body Battery, HRV status, sleep, stress, training readiness and status, activities. Data source: Garmin Connect in unofficial personal mode (Garmin has no public consumer API): the user logs in locally once and the connector reuses the resulting Garmin Connect tokens.
 
 ## Workflow
 
@@ -17,9 +17,9 @@ MCP server `garmin` from the `garmin-mcp-unofficial@0.7.6` npm package, run loca
 ## Setup (the user runs this in a terminal, not in chat)
 
 ```bash
-npx -y garmin-mcp-unofficial@0.7.6 setup --client generic
-npx -y garmin-mcp-unofficial@0.7.6 auth
-npx -y garmin-mcp-unofficial@0.7.6 doctor
+npx -y garmin-mcp-unofficial@0.8.0 setup --client generic
+npx -y garmin-mcp-unofficial@0.8.0 auth
+npx -y garmin-mcp-unofficial@0.8.0 doctor
 ```
 
 `--client generic` keeps setup from writing a second Hermes server entry. `auth` asks for the Garmin Connect email, password and MFA code in the user's own terminal and saves only the resulting tokens to `~/.garmin-mcp/garmin_tokens.json`; the password is not stored.
