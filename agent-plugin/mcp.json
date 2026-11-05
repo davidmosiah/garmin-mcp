@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "garmin": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "garmin-mcp-unofficial@0.7.6"
+      ],
+      "cwd": "${PLUGIN_DATA}"
+    }
+  }
+}

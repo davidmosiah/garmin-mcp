@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "garmin-mcp",
+  "version": "0.7.6",
+  "description": "Read the user's Garmin Body Battery, HRV status, sleep, stress, training readiness and activities through the local garmin MCP server.",
+  "author": {
+    "name": "David Mosiah",
+    "url": "https://github.com/davidmosiah"
+  },
+  "homepage": "https://github.com/davidmosiah/garmin-mcp",
+  "repository": "https://github.com/davidmosiah/garmin-mcp",
+  "license": "MIT",
+  "keywords": [
+    "ai-agents",
+    "fitness",
+    "garmin",
+    "health",
+    "heart-rate",
+    "hermes",
+    "mcp",
+    "model-context-protocol",
+    "sleep"
+  ]
+}
